@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context=".PageSurveyStore">
+
+    <TextView
+        android:id="@+id/textSurveyStoreTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Survey Store"
+        android:gravity="center"
+        android:textColor="@color/black"
+        android:textSize="24sp"
+        android:background="@color/greenTint"
+        android:padding="5dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+<!--    <TextView-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="Survey Store"-->
+<!--        android:textSize="48sp"-->
+<!--        app:layout_constraintBottom_toBottomOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintTop_toTopOf="parent" />-->
+
+    <LinearLayout
+        android:id="@+id/frameSurveyStore"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:weightSum="12"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textSurveyStoreTitle"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <LinearLayout
+            android:id="@+id/frameSurveyConfig"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="3"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/textLoadedFile"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Loaded file: "
+                android:textSize="20sp"/>
+
+            <TextView
+                android:id="@+id/textNumNavSat"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Navigation satellite count: "
+                android:textSize="20sp"
+                app:layout_constraintTop_toBottomOf="@id/textSurveyStoreTitle"
+                app:layout_constraintStart_toStartOf="parent"/>
+
+            <TextView
+                android:id="@+id/textNumObs"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Number of observations: "
+                android:textSize="20sp"
+                app:layout_constraintTop_toBottomOf="@id/textSurveyStoreTitle"
+                app:layout_constraintStart_toStartOf="parent"/>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnLoadCsv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Load CSV"
+                    android:textSize="20sp"
+                    android:textColor="@color/black"
+                    android:layout_margin="10dp"
+                    android:backgroundTint="@color/gray_100"
+                    app:strokeWidth="2dp"
+                    app:strokeColor="@color/gray_600"
+                    app:cornerRadius="5dp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCalculate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Calculate"
+                    android:textSize="20sp"
+                    android:textColor="@color/black"
+                    android:layout_margin="10dp"
+                    android:backgroundTint="@color/gray_100"
+                    app:strokeWidth="2dp"
+                    app:strokeColor="@color/gray_600"
+                    app:cornerRadius="5dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/frameSurveyData"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="6"
+            android:weightSum="2"
+            android:orientation="horizontal"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/textSurveyStoreTitle">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SPP Only"
+                    android:textSize="20sp"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="20sp"
+                    android:text="With DGNSS"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/frameKnownPos"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="3"
+            android:orientation="vertical">
+        </LinearLayout>
+
+
+    </LinearLayout>
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

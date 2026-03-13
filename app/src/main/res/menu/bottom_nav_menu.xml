@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/navSurvey"
+        android:icon="@drawable/ic_map_24px"
+        android:title="Survey" />
+    <item
+        android:id="@+id/navSurveyStore"
+        android:icon="@drawable/ic_map_24px"
+        android:title="Survey Store" />
+    <item
+        android:id="@+id/navMap"
+        android:icon="@drawable/ic_map_24px"
+        android:title="Map" />
+</menu>
