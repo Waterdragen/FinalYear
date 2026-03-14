@@ -240,7 +240,7 @@ object MathFn {
         weekNum: Double,
     ): PositionAndRangeResidual {
         var arrivalTowSec = arrivalTowSec
-        val correctedArrivalTowSec = arrivalTowSec - posEcef[3] / Const.c   // new
+        val correctedArrivalTowSec = arrivalTowSec - posEcef[3] / Const.c  // new
         var weekNum = weekNum
 
         val numSats = navDataList.size
@@ -318,9 +318,12 @@ object MathFn {
                     + troposphericCorr
                     + posEcef[3]
             )
+            Log.d("GNSS", "posEcef[3]: ${posEcef[3]}")
 
             // pseudorange residual (difference of measured to predicted)
             deltaRangeMeters[satCounter] = pseudorange - predictedPseudorange
+            Log.d("GNSS", "Predicted: $predictedPseudorange")
+            Log.d("GNSS", "Pseudorange: $pseudorange")
 
             // Satellite PRNs
             satPrns[satCounter] = obsData.inner.prn

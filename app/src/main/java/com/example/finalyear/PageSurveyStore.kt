@@ -187,12 +187,17 @@ class PageSurveyStore : Fragment() {
         val sppNavList = surveyDataSpp.navDataList
         val dgnssNavList = surveyDataDgnss.navDataList
 
+        // Approximate location of Hong Kong
+        val APPROX_X = -2.416e6
+        val APPROX_Y = 5.388e6
+        val APPROX_Z = 2.410e6
+
         for (epoch in surveyDataSpp.obsDataListByEpoch.keys) {
             val sppObsList = surveyDataSpp.obsDataListByEpoch[epoch]!!
             val dgnssObsList = surveyDataDgnss.obsDataListByEpoch[epoch]!!
-            val sppPosEcef = SimpleMatrix(8, 1)
+            val sppPosEcef = SimpleMatrix(arrayOf(doubleArrayOf(APPROX_X, APPROX_Y, APPROX_Z, 0.0, 0.0, 0.0, 0.0, 0.0)))
             val sppPosUncertaintyEnu = SimpleMatrix(6, 1)
-            val dgnssPosEcef = SimpleMatrix(8, 1)
+            val dgnssPosEcef = SimpleMatrix(arrayOf(doubleArrayOf(APPROX_X, APPROX_Y, APPROX_Z, 0.0, 0.0, 0.0, 0.0, 0.0)))
             val dgnssPosUncertaintyEnu = SimpleMatrix(6, 1)
 
             try {
@@ -324,9 +329,9 @@ class PageSurveyStore : Fragment() {
         val rangeRateWeight = SimpleMatrix(numSats, numSats)
 
 //        arrivalTowSec -= posEcef[3] / Const.c  // old
-        val approxRxTow = arrivalTowSec - posEcef[3] / Const.c  // new
+        val approxRxTow = arrivalTowSec - posEcef[3] / Const.c // new
 
-        for (i in 0 until navList.size) {
+        for (i in navList.indices) {
             val navData = navList[i]
             val pseudorange = mutMeasurements[i].pseudorange
 
@@ -443,8 +448,9 @@ class PageSurveyStore : Fragment() {
     }
 
     private fun handleSuccessfullyResolvedLocation(sppEnh: Hk1980.Grid, dgnssEnh: Hk1980.Grid) {
-        val sppText = "Easting: ${sppEnh.e}\nNorthing: ${sppEnh.n}\nHeight: ${sppEnh.h}\n"
-        val dgnssText = "Easting: ${dgnssEnh.e}\nNorthing: ${dgnssEnh.n}\nHeight: ${dgnssEnh.h}\n"
+
+        val sppText = String.format("Easting: %.3f\nNorthing: %.3f\nHeight: %.3f\n", sppEnh.e, sppEnh.n, sppEnh.h)
+        val dgnssText = String.format("Easting: %.3f\nNorthing: %.3f\nHeight: %.3f\n", dgnssEnh.e, dgnssEnh.n, dgnssEnh.h)
         textSppResult.text = sppText
         textDgnssResult.text = dgnssText
 
@@ -546,7 +552,7 @@ class PageSurveyStore : Fragment() {
             val dgps = rtcm.dgps[prn - 1] ?: continue
             val age = time - dgps.t0.asGpsTimeSecs()  // Time of base station
 
-            val correctedPseudorange = obsData.pseudorange + dgps.prc + dgps.rrc * age
+            val correctedPseudorange = obsData.pseudorange - (dgps.prc + dgps.rrc * age)
             obsData.pseudorange = correctedPseudorange
 
             adjustedObsDataList.add(obsData)  // Push cloned to new list
