@@ -117,7 +117,7 @@ class Parser {
         // The prn range for GPS is [1, 32], caller should ensure no other constellations use this list
         val partialNavDataList: MutableList<PartialNavData> = (1..32).map { index -> PartialNavData(index) }.toMutableList()
 
-        val obsDataList: Array<OverwritingQueue<ObsData>> = Array(32) { _ -> OverwritingQueue(1) }
+        val obsDataList: Array<OverwritingQueue<ObsData>> = Array(32) { _ -> OverwritingQueue(10) }
 
         val ionoCorrections: IonoModel = IonoModel()
 
@@ -175,10 +175,8 @@ class Parser {
 
                 obsDataList[measurement.svid - 1].push(ObsData(
                     prn = measurement.svid,
-                    gpsTimeNs = clock.timeNanos,
+                    gpsTimeNs = rxTimeNsSinceEpoch,
                     // arrivalTowNs = arrivalTimeSinceGpsWeekNs,  // old
-                    fullBiasNs = fullBiasNs,
-                    biasNs = biasNs,
                     rxTimeNs = rxTimeNs,
 //                    recvSvTowNs = measurement.receivedSvTimeNanos,  // old
                     txTimeNs = measurement.receivedSvTimeNanos,

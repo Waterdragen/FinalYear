@@ -39,12 +39,10 @@ object Tropospheric {
 
     val assumedMetStats = MeteorologyStats.fromRh(
         pressureHpa = 1013.25,
-        tempKelvin = 299.0,  // 26°C
-        rh = 0.5,  // 50% relative humidity
+        tempKelvin = 301.0,  // 28°C
+        rh = 0.75,  // 75% relative humidity
     )
 
-    // P = rho + ... + T + ...
-    // Apply the correction with -T
     fun calculateTroposphericDelayMeters(
         userPosEcefMeters: DoubleArray,
         satPosEcefMeters: SimpleMatrix,

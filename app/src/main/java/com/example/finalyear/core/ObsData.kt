@@ -10,9 +10,6 @@ data class ObsData (
     val gpsTimeNs: Long,
 //    val arrivalTowNs: Long,  // old
 //    val recvSvTowNs: Long,  // old
-    val fullBiasNs: Long,  // new
-    val biasNs: Long,  // new
-
 
     // Receiver side
     val rxTimeNs: Long,  // new
@@ -36,8 +33,6 @@ data class ObsData (
             "gpsTimeNs",
 //            "arrivalTimeNs",  // old
 //            "recvSvTimeNs",  // old
-            "fullBiasNs",  // new
-            "biasNs",  // new
             "rxTimeNs",  // new
             "txTimeNs",  // new
             "txTimeOffsetNs",  // new
@@ -67,8 +62,6 @@ data class ObsData (
         sb.append(gpsTimeNs.toString()); sb.append(',')
 //        sb.append(arrivalTowNs.toString()); sb.append(',')  // old
 //        sb.append(recvSvTowNs.toString()); sb.append(',')  // old
-        sb.append(fullBiasNs.toString()); sb.append(',')
-        sb.append(biasNs.toString()); sb.append(',')
         sb.append(rxTimeNs.toString()); sb.append(',')
         sb.append(txTimeNs.toString()); sb.append(',')
         sb.append(txTimeOffsetNs.toString()); sb.append(',')
@@ -86,7 +79,7 @@ data class ObsData (
 
     fun clone(): ObsData {
         return ObsData(
-            prn, gpsTimeNs, fullBiasNs, biasNs, rxTimeNs, txTimeNs, txTimeOffsetNs, pseudorangeRateMps, pseudorangeRateUncertaintyMps, adrMeters, adrMetersValid, adrUncertaintyMeters, signalToNoiseRatioDb
+            prn, gpsTimeNs, rxTimeNs, txTimeNs, txTimeOffsetNs, pseudorangeRateMps, pseudorangeRateUncertaintyMps, adrMeters, adrMetersValid, adrUncertaintyMeters, signalToNoiseRatioDb
         )
     }
 }

@@ -6,6 +6,7 @@ import com.example.finalyear.core.ObsDataWithRange
 import com.example.finalyear.core.PositionAndRangeResidual
 import com.example.finalyear.core.PositionAndVelocity
 import com.example.finalyear.core.SatClockCorrection
+import com.example.finalyear.model.Tropospheric
 import com.example.finalyear.util.Point
 import com.example.finalyear.util.Xyz
 import org.ejml.simple.SimpleMatrix
@@ -239,6 +240,7 @@ object MathFn {
         weekNum: Double,
     ): PositionAndRangeResidual {
         var arrivalTowSec = arrivalTowSec
+        val correctedArrivalTowSec = arrivalTowSec - posEcef[3] / Const.c   // new
         var weekNum = weekNum
 
         val numSats = navDataList.size
@@ -254,7 +256,8 @@ object MathFn {
         for (i in 0 until numSats) {
             val navData = navDataList[i]
             val obsData = obsDataList[i]
-            arrivalTowSec -= posEcef[3] / Const.c
+//            arrivalTowSec -= posEcef[3] / Const.c  // old
+
             val pseudorange = obsData.pseudorange
             val pseudorangeUncertainty = obsData.uncertainty
 
@@ -265,7 +268,8 @@ object MathFn {
             // adjust for week rollover
             val (rxTowAtTimeOfTransmissionCorrected, newWeekNum) = calculateCorrectedTransmitTowAndWeek(
                 navData = navData,
-                arrivalTowSec = arrivalTowSec,
+//                arrivalTowSec = arrivalTowSec,  // old
+                arrivalTowSec = correctedArrivalTowSec,  // new
                 weekNum = weekNum,
                 pseudorange = pseudorange,
             )
@@ -291,7 +295,10 @@ object MathFn {
                 frequencyHz = 1.57542e9  // L1 Frequency
             ) * Const.c
 
-            val troposphericCorr = 0.0
+            val troposphericCorr = Tropospheric.calculateTroposphericDelayMeters(
+                userPosEcefMeters = userPosTempEcefMeters,
+                satPosEcefMeters = satPosEcefMeters,
+            )
 
             // Calculate predicted pseudorange
             // - calculate the satellite clock drift

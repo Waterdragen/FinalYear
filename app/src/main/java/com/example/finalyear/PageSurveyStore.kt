@@ -41,10 +41,13 @@ class PageSurveyStore : Fragment() {
     lateinit var textLoadedFile: TextView
     lateinit var textNumNavSat: TextView
     lateinit var textNumObs: TextView
+    lateinit var textSppResult: TextView
+    lateinit var textDgnssResult: TextView
     lateinit var frameSurveyData: LinearLayout
 
 //    val surveyDataList: ArrayList<SurveyData> = arrayListOf()
-var surveyData: SurveyData? = null
+    var surveyDataDgnss: SurveyData? = null
+    var surveyDataSpp: SurveyData? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -64,6 +67,8 @@ var surveyData: SurveyData? = null
         textLoadedFile = view.findViewById(R.id.textLoadedFile)
         textNumNavSat = view.findViewById(R.id.textNumNavSat)
         textNumObs = view.findViewById(R.id.textNumObs)
+        textSppResult = view.findViewById(R.id.textSppResult)
+        textDgnssResult = view.findViewById(R.id.textDgnssResult)
 
         frameSurveyData = view.findViewById(R.id.frameSurveyData)
     }
@@ -103,40 +108,41 @@ var surveyData: SurveyData? = null
         val baseName: String
         val navDataList: List<NavData>?
         val obsDataList: List<ObsData>?
-        val stationRtcmMapOptional: Map<Int, Rtcm>?
+        val stationRtcmMapOptional: Map<Int, Rtcm>
 
-        if (navFile.name.endsWith("-nav.csv")) {
-            val navCsvParser = CsvParser.tryFromFile(navFile)
-            if (navCsvParser == null) {
-                showDialog("Fatal", "Nav file does not exist after selection")
-                return
-            }
-            baseName = navFile.name.removeSuffix("-nav.csv")
-            val obsFileName = "$baseName-obs.csv"
-            val obsCsvParser = CsvParser.tryFromFile(File(context.filesDir, obsFileName))
-            if (obsCsvParser == null) {
-                showDialog("Error", "Obs file does not exist")
-                return
-            }
-            navDataList = navCsvParser.tryParseNavDataList()
-            obsDataList = obsCsvParser.tryParseObsDataList()
-
-            val dgnssFileName = "$baseName-dgnss.txt"
-            val dgnssFile = File(context.filesDir, dgnssFileName)
-            stationRtcmMapOptional = if (dgnssFile.exists()) {
-                try {
-                    val dgnssText = dgnssFile.readText(Charsets.UTF_8)
-                    CustomRtcmParser.deserializeStationRtcmMap(dgnssText)
-                } catch (e: Exception) {
-                    Log.e("GNSS", e.stackTraceToString())
-                    null
-                }
-            } else {
-                Log.w("GNSS", "DGNSS file not found")
-                null
-            }
-        } else {
+        if (!navFile.name.endsWith("-nav.csv")) {
             showDialog("Error", "Mangled file name `${navFile.name}`, should have nav or obs suffix")
+            return
+        }
+
+        val navCsvParser = CsvParser.tryFromFile(navFile)
+        if (navCsvParser == null) {
+            showDialog("Fatal", "Nav file does not exist after selection")
+            return
+        }
+        baseName = navFile.name.removeSuffix("-nav.csv")
+        val obsFileName = "$baseName-obs.csv"
+        val obsCsvParser = CsvParser.tryFromFile(File(context.filesDir, obsFileName))
+        if (obsCsvParser == null) {
+            showDialog("Error", "Obs file does not exist")
+            return
+        }
+        navDataList = navCsvParser.tryParseNavDataList()
+        obsDataList = obsCsvParser.tryParseObsDataList()
+
+        val dgnssFileName = "$baseName-dgnss.txt"
+        val dgnssFile = File(context.filesDir, dgnssFileName)
+        if (!dgnssFile.exists()) {
+            showDialog("Error", "DGNSS file does not exist")
+            Log.e("GNSS", "DGNSS file does not exist")
+            return
+        }
+        stationRtcmMapOptional = try {
+            val dgnssText = dgnssFile.readText(Charsets.UTF_8)
+            CustomRtcmParser.deserializeStationRtcmMap(dgnssText) ?: throw Exception("Failed to parse DGNSS file")
+        } catch (e: Exception) {
+            showDialog("Error", "Error parsing custom DGNSS file")
+            Log.e("GNSS", e.stackTraceToString())
             return
         }
 
@@ -149,19 +155,17 @@ var surveyData: SurveyData? = null
             return
         }
 
-        val obsDataListWithRange = computePseudoranges(obsDataList)
-        if (stationRtcmMapOptional != null) {
-            adjustPseudorange(obsDataListWithRange, stationRtcmMapOptional)
-        }
+        val obsDataListSpp = computePseudoranges(obsDataList)
+        val obsDataListDgnss = adjustPseudorange(obsDataListSpp, stationRtcmMapOptional)
 
+        surveyDataSpp = SurveyData.new(baseName, navDataList, obsDataListSpp)
+        val newSurveyData = SurveyData.new(baseName, navDataList, obsDataListDgnss)
+        surveyDataDgnss = newSurveyData
         showDialog("Success", "Stored `$baseName` to survey data list")
-        val newSurveyData = SurveyData.new(baseName, navDataList, obsDataListWithRange)
-        surveyData = newSurveyData
-//        surveyDataList.add(SurveyData(baseName, navDataList, obsDataListWithRange))
 
         textLoadedFile.text = "Loaded file: ${navFile.name}"
         textNumNavSat.text = "Navigation satellite count: ${newSurveyData.navDataList.size}"
-        textNumObs.text = "Number of observations: ${newSurveyData.obsDataList.size}"
+        textNumObs.text = "Number of observations: ${obsDataListSpp.size}"  // Number of raw measurements
     }
 
     private fun showDialog(title: String, msg: String) {
@@ -173,51 +177,59 @@ var surveyData: SurveyData? = null
             .show()
     }
 
-    private fun processGpsPosition(
-//        surveyDataIndex: Int
-    ) {
-//        val surveyData = surveyDataList.getOrNull(surveyDataIndex) ?: return  // TODO: Handle index out of bounds logic
-        val surveyData = surveyData ?: return
+    private fun processGpsPosition() {
+        val surveyDataSpp = surveyDataSpp ?: return
+        val surveyDataDgnss = surveyDataDgnss ?: return
 
-        val navList = surveyData.navDataList
-        val obsList = surveyData.obsDataList
-//        val navList = arrayListOf<NavData>()
-//        val obsList = arrayListOf<ObsDataWithRange>()
-        val posEcef = SimpleMatrix(8, 1)
-        val posUncertaintyEnu = SimpleMatrix(6, 1)
+        val sppPosList = arrayListOf<Hk1980.Grid>()
+        val dgnssPosList = arrayListOf<Hk1980.Grid>()
 
-//        for (obsData in surveyData.obsDataList) {
-//            val obsTime = obsData.inner.gpsTimeNs
-//            var matchNavData: NavData? = null
-//            for (navData in surveyData.navDataList) {
-//                if (navData.prn == obsData.inner.prn) {
-//                    matchNavData = navData
-//                    break
-//                }
-//            }
-//            // No satellites with matching PRN found
-//            if (matchNavData == null) {
-//                continue
-//            }
-//
-//            // Found a matching satellite with matching PRN, but expired
-//            if (abs(GpsTime.fromDateTime(matchNavData.dateTime).nanos - obsTime) >= 1_000_000_000L * 3600 * 4) {
-//                val minutesBetween = Minutes.minutesBetween(matchNavData.dateTime, GpsTime.fromNanos(obsTime).toDateTime()).minutes
-//                Log.d("GNSS", "expired matching satellite, dateTime: ${matchNavData.dateTime}, obsTime: ${GpsTime.fromNanos(obsTime).toDateTime()}, minutes between: $minutesBetween")
-//                continue
-//            }
-//            navList.add(matchNavData)
-//            obsList.add(obsData)
-//        }
+        val sppNavList = surveyDataSpp.navDataList
+        val dgnssNavList = surveyDataDgnss.navDataList
 
-        try {
-            leastSquareAdjustment(navList, obsList, posEcef, posUncertaintyEnu)
-//            leastSquareAdjustment2(navList, obsList, posEcef, posUncertaintyEnu)
-            val ecefPos = Xyz.from(posEcef)
-            showDialogSuccessfullyResolvedLocation(ecefPos)
-        } catch (e: MyException.NotEnoughSatellites) {
-            showDialog("Not Enough satellites", e.toString())
+        for (epoch in surveyDataSpp.obsDataListByEpoch.keys) {
+            val sppObsList = surveyDataSpp.obsDataListByEpoch[epoch]!!
+            val dgnssObsList = surveyDataDgnss.obsDataListByEpoch[epoch]!!
+            val sppPosEcef = SimpleMatrix(8, 1)
+            val sppPosUncertaintyEnu = SimpleMatrix(6, 1)
+            val dgnssPosEcef = SimpleMatrix(8, 1)
+            val dgnssPosUncertaintyEnu = SimpleMatrix(6, 1)
+
+            try {
+                leastSquareAdjustment(sppNavList, sppObsList, sppPosEcef, sppPosUncertaintyEnu)
+                leastSquareAdjustment(dgnssNavList, dgnssObsList, dgnssPosEcef, dgnssPosUncertaintyEnu)
+
+                sppPosList.add(Hk1980.Grid.fromWgs84Xyz(Xyz.from(sppPosEcef)))
+                dgnssPosList.add(Hk1980.Grid.fromWgs84Xyz(Xyz.from(dgnssPosEcef)))
+            } catch (e: MyException.NotEnoughSatellites) {
+                showDialog("Not Enough satellites", e.toString())
+                return
+            } catch (e: MyException.LsConvergeFail) {
+                continue
+            }
         }
+
+        val sppAvgPos = arrayOf(0.0, 0.0, 0.0)
+        var dgnssAvgPos = arrayOf(0.0, 0.0, 0.0)
+        for (sppPos in sppPosList) {
+            sppAvgPos[0] += sppPos.e
+            sppAvgPos[1] += sppPos.n
+            sppAvgPos[2] += sppPos.h
+        }
+        for (dgnssPos in dgnssPosList) {
+            dgnssAvgPos[0] += dgnssPos.e
+            dgnssAvgPos[1] += dgnssPos.n
+            dgnssAvgPos[2] += dgnssPos.h
+        }
+        for (i in 0 until 3) {
+            sppAvgPos[i] /= sppPosList.size.toDouble()
+            dgnssAvgPos[i] /= dgnssPosList.size.toDouble()
+        }
+
+        handleSuccessfullyResolvedLocation(
+            Hk1980.Grid(sppAvgPos[0], sppAvgPos[1], sppAvgPos[2]),
+            Hk1980.Grid(dgnssAvgPos[0], dgnssAvgPos[1], dgnssAvgPos[2]),
+        )
     }
 
     private fun leastSquareAdjustment(navList: List<NavData>,
@@ -247,107 +259,72 @@ var surveyData: SurveyData? = null
             throw MyException.NotEnoughSatellites("Not enough satellites, expected 4, got only $numSats")
         }
 
-        var started = false
-        var repeatLeastSquare = false
+        var iterCount = 0
+        var delta = SimpleMatrix(4, 1).also {
+            it[0] = 100.0; it[1] = 100.0; it[2] = 100.0; it[3] = 100.0
+        }  // large initial value to force first iteration
 
-        while (!started || repeatLeastSquare) {
-            started = true
+        var weightedGeometryMatrixInv: SimpleMatrix? = null
 
-            // Calculate sat pos and residuals
+        while (abs(delta[0]) + abs(delta[1]) + abs(delta[2]) >= 1e-7) {
+            iterCount++
+
+            if (iterCount > 50) {
+                Log.d("GNSS", "Last delta: $delta")
+                Log.d("GNSS", "Final posEcef: $posEcef")
+                throw MyException.LsConvergeFail("Least squares failed to converge after $iterCount iterations")
+            }
+
+            val approxRxTow = arrivalTowSec - posEcef[3] / Const.c
+
             posAndRangeResidual = MathFn.calculateSatPosAndPseudorangeResidual(
                 navDataList = navList,
                 obsDataList = obsList,
                 posEcef = posEcef,
-                arrivalTowSec = arrivalTowSec,
-                weekNum = weekNum,
+                arrivalTowSec = approxRxTow,
+                weekNum = weekNum
             )
+
             val satPosEcefMeters = posAndRangeResidual.satPosMeters
 
-            // Calculate the geometry matrix according to "Global Positioning System: Theory and
-            // Applications", Parkinson and Spilker page 413
-            geometryMatrix = MathFn.calculateGeometryMatrix(satPosEcefMeters = satPosEcefMeters,
-                                                            posEcef = posEcef)
+            // Geometry / design matrix (unit vectors + clock column)
+            geometryMatrix = MathFn.calculateGeometryMatrix(
+                satPosEcefMeters = satPosEcefMeters,
+                posEcef = posEcef
+            )
 
+            // Weighted matrix (covariance matrix squared)
             val covarMatrixMetersSq = posAndRangeResidual.covarMatrixMetersSq
             val det = covarMatrixMetersSq.determinant()
 
-            var weightedGeometryMatrixInv: SimpleMatrix? = null
             val weightedGeometryMatrix = if (det < 1e-9) {
                 geometryMatrix
             } else {
-                weightedGeometryMatrixInv = covarMatrixMetersSq.invert()
-                val hMatrix = MathFn.calculateHMatrix(weightedGeometryMatrixInv, geometryMatrix)
-                hMatrix.mult(geometryMatrix.transpose()).mult(weightedGeometryMatrixInv)
+                if (weightedGeometryMatrixInv == null || iterCount == 1) {
+                    weightedGeometryMatrixInv = covarMatrixMetersSq.invert()
+                }
+                val hMatrix = MathFn.calculateHMatrix(weightedGeometryMatrixInv!!, geometryMatrix)  // !! overwritten by previous condition
+                hMatrix.mult(geometryMatrix.transpose()).mult(weightedGeometryMatrixInv!!)
             }
 
-            // Calculate delta position meters
-            // Equation 9 page 413 from "Global Positioning System: Theory and Applications", Parkinson
-            // and Spilker
-            var deltaPosMeters = MathFn.matrixByColVecMult(weightedGeometryMatrix,
-                                                           posAndRangeResidual.deltaRangeMeters)
+            // Compute adjustments
+            delta = MathFn.matrixByColVecMult(weightedGeometryMatrix, posAndRangeResidual.deltaRangeMeters)
 
-            // Apply corrections to the position estimate
-            posEcef[0] += deltaPosMeters[0]
-            posEcef[1] += deltaPosMeters[1]
-            posEcef[2] += deltaPosMeters[2]
-            posEcef[3] += deltaPosMeters[3]
-
-            // Apply weighted least square
-
-            var iterCount = 0
-
-            while (abs(deltaPosMeters[0])
-                   + abs(deltaPosMeters[1])
-                   + abs(deltaPosMeters[2]) >= 4e-8) {
-                // We don't do iono and tropo corrections for now
-
-                posAndRangeResidual = MathFn.calculateSatPosAndPseudorangeResidual(
-                    navDataList = navList,
-                    obsDataList = obsList,
-                    posEcef = posEcef,
-                    arrivalTowSec = arrivalTowSec,
-                    weekNum = weekNum,
-                )
-
-                geometryMatrix = MathFn.calculateGeometryMatrix(
-                    satPosEcefMeters = posAndRangeResidual.satPosMeters,
-                    posEcef = posEcef,
-                )
-
-                val newWeightedGeometryMatrix = if (weightedGeometryMatrixInv == null) {
-                    geometryMatrix
-                } else {
-                    val hMatrix = MathFn.calculateHMatrix(weightedGeometryMatrixInv, geometryMatrix)
-                    hMatrix.mult(geometryMatrix.transpose()).mult(weightedGeometryMatrixInv)
-                }
-
-                deltaPosMeters = MathFn.matrixByColVecMult(newWeightedGeometryMatrix,
-                                                               posAndRangeResidual.deltaRangeMeters)
-
-                // Apply corrections to the position estimate
-                posEcef[0] += deltaPosMeters[0]
-                posEcef[1] += deltaPosMeters[1]
-                posEcef[2] += deltaPosMeters[2]
-                posEcef[3] += deltaPosMeters[3]
-
-                iterCount += 1
-                if (iterCount >= 100) {
-                    Log.d("GNSS", "$deltaPosMeters")
-                    Log.d("GNSS", "$posEcef")
-                    throw RuntimeException("Least square iterations failed to converge")
-                }
-            }
-
-
+            // Apply adjustments
+            posEcef[0] += delta[0]
+            posEcef[1] += delta[1]
+            posEcef[2] += delta[2]
+            posEcef[3] += delta[3]
         }
-        // TODO: we assume we don't we to do least square again for now
+        Log.d("GNSS", "posEcef[3]: ${posEcef[3]}")
 
         numSats = geometryMatrix.numRows()
         val rangeRate = SimpleMatrix(numSats, 1)
         val deltaRangeRate = SimpleMatrix(numSats, 1)
         val rangeRateWeight = SimpleMatrix(numSats, numSats)
 
-        arrivalTowSec -= posEcef[3] / Const.c
+//        arrivalTowSec -= posEcef[3] / Const.c  // old
+        val approxRxTow = arrivalTowSec - posEcef[3] / Const.c  // new
 
         for (i in 0 until navList.size) {
             val navData = navList[i]
@@ -355,7 +332,7 @@ var surveyData: SurveyData? = null
 
             val (gpsTowSec, newWeekNum) = MathFn.calculateCorrectedTransmitTowAndWeek(
                 navData = navData,
-                arrivalTowSec = arrivalTowSec,
+                arrivalTowSec = approxRxTow,
                 weekNum = weekNum,
                 pseudorange = pseudorange,
             )
@@ -449,18 +426,6 @@ var surveyData: SurveyData? = null
         }
     }
 
-//    private fun createSurveyDataButton() {
-//        val index = surveyDataList.size - 1
-//        val btn = Button(requireContext())
-//        btn.height = 50
-//        btn.width = 50
-//        btn.text = "Survey Data $index"
-//        btn.setOnClickListener { processGpsPosition(
-//            index
-//        ) }
-//        frameSurveyData.addView(btn)
-//    }
-
     private fun showDialogSuccessfullyResolvedLocation(ecefPos: Xyz) {
         val wgs84Pos = ecefPos.toPhiLamH()
         val phiDeg = wgs84Pos.phi / Math.PI * 180.0
@@ -472,6 +437,20 @@ var surveyData: SurveyData? = null
         AlertDialog.Builder(requireContext())
             .setTitle("Success")
             .setMessage(message)
+            .setCancelable(true)
+            .setPositiveButton("OK") { _, _ -> }
+            .show()
+    }
+
+    private fun handleSuccessfullyResolvedLocation(sppEnh: Hk1980.Grid, dgnssEnh: Hk1980.Grid) {
+        val sppText = "Easting: ${sppEnh.e}\nNorthing: ${sppEnh.n}\nHeight: ${sppEnh.h}\n"
+        val dgnssText = "Easting: ${dgnssEnh.e}\nNorthing: ${dgnssEnh.n}\nHeight: ${dgnssEnh.h}\n"
+        textSppResult.text = sppText
+        textDgnssResult.text = dgnssText
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Success")
+            .setMessage(null)
             .setCancelable(true)
             .setPositiveButton("OK") { _, _ -> }
             .show()
@@ -543,10 +522,14 @@ var surveyData: SurveyData? = null
 //            .sortedBy { it.inner.prn }
     }
 
-    private fun adjustPseudorange(obsDataList: List<ObsDataWithRange>, stationRtcmMap: Map<Int, Rtcm>) {
-        for (obsData in obsDataList) {
+    private fun adjustPseudorange(obsDataList: List<ObsDataWithRange>, stationRtcmMap: Map<Int, Rtcm>): List<ObsDataWithRange> {
+        val adjustedObsDataList = arrayListOf<ObsDataWithRange>()
+
+        for (unadjustedObsData in obsDataList) {
+            val obsData = unadjustedObsData.clone()
+
             val prn = obsData.inner.prn
-            val time = (obsData.inner.gpsTimeNs - obsData.inner.fullBiasNs - obsData.inner.biasNs) / 1e9  // Time of receiver receiving pseudorange
+            val time = obsData.inner.gpsTimeNs.toDouble() / 1e9  // Time of receiver receiving pseudorange
 
             var bestRtcm: Rtcm? = null
             var bestWeight = Double.NEGATIVE_INFINITY
@@ -565,7 +548,10 @@ var surveyData: SurveyData? = null
 
             val correctedPseudorange = obsData.pseudorange + dgps.prc + dgps.rrc * age
             obsData.pseudorange = correctedPseudorange
+
+            adjustedObsDataList.add(obsData)  // Push cloned to new list
         }
+        return adjustedObsDataList
     }
 
 

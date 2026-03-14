@@ -1,44 +1,57 @@
 package com.example.finalyear.util
 
-import android.util.Log
-import com.example.finalyear.GpsTime
 import com.example.finalyear.core.NavData
 import com.example.finalyear.core.ObsDataWithRange
-import kotlin.math.abs
 
 data class SurveyData private constructor (
     val baseName: String,
     val navDataList: List<NavData>,
-    val obsDataList: List<ObsDataWithRange>,
+//    val obsDataList: List<ObsDataWithRange>,
+    val obsDataListByEpoch: Map<Long, List<ObsDataWithRange>>,
 ) {
     companion object {
-        private const val FOUR_HOURS_IN_NS = 1_000_000_000L * 3600 * 4
+        fun new(baseName: String, navDataList: List<NavData>, obsDataList: List<ObsDataWithRange>): SurveyData {  // obsDataList is raw pseudoranges
+            val obsDataGrouped = obsDataList.groupBy { it.inner.prn }
 
-        fun new(baseName: String, navDataList: List<NavData>, obsDataList: List<ObsDataWithRange>): SurveyData {
             val navDataMap = mutableMapOf<Int, NavData>()
             for (navData in navDataList) {
-                navDataMap[navData.prn] = navData  // later ones overwrite earlier ones
+                if (obsDataGrouped.containsKey(navData.prn)) {  // ensure all ephemerides have observations
+                    navDataMap[navData.prn] = navData  // later ones overwrite earlier ones
+                }
             }
 
-            val filteredObsDataList = obsDataList.filter {
-                val obsData = it.inner
-                val navData = navDataMap[obsData.prn] ?: return@filter false  // ensure all observations has ephemerides
-                val navDataGpsTime = GpsTime.fromDateTime(navData.dateTime).nanos
-                val obsDataGpsTime = obsData.gpsTimeNs - obsData.fullBiasNs - obsData.biasNs
-                abs(navDataGpsTime - obsDataGpsTime) < FOUR_HOURS_IN_NS  // ensure ephemerides are not expired
+            val filteredNavDataList = navDataMap.values.toList().sortedBy { it.prn }
+
+            val obsDataListByEpoch = obsDataList.groupBy { it.inner.rxTimeNs }.toMutableMap()
+            for ((epoch, lst) in obsDataListByEpoch)  {
+                obsDataListByEpoch[epoch] = lst
+                    .filter { navDataMap.containsKey(it.inner.prn) }  // ensure all observations have ephemerides
+                    .sortedBy { it.inner.prn }
             }
 
-            val filteredNavDataList = arrayListOf<NavData>()
-            for (obsData in filteredObsDataList) {
-                val navData = navDataMap[obsData.inner.prn] ?: continue  // ensure all ephemerides have observations
-                filteredNavDataList.add(navData)
+            val obsDataListIter = obsDataListByEpoch.entries.iterator()
+
+            while (obsDataListIter.hasNext()) {
+                val (_, lst) = obsDataListIter.next()
+                if (lst.size != filteredNavDataList.size) {  // missing measurements for epoch
+                    obsDataListIter.remove()
+                }
+                var avgSnrDb = 0.0
+                for (obsData in lst) {
+                    avgSnrDb += obsData.inner.signalToNoiseRatioDb
+                }
+                avgSnrDb /= lst.size
+                if (avgSnrDb < 10) {
+                    obsDataListIter.remove()
+                }
             }
-            require(filteredNavDataList.size == filteredObsDataList.size)
+
 
             return SurveyData(
                 baseName = baseName,
                 navDataList = filteredNavDataList,
-                obsDataList = filteredObsDataList
+//                obsDataList = filteredObsDataList,
+                obsDataListByEpoch = obsDataListByEpoch,
             )
         }
     }

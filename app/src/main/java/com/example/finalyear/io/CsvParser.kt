@@ -108,8 +108,6 @@ class CsvParser(val lines: Iterator<String>) {
         val gpsTimeNsPos = headerMap["gpsTimeNs"] ?: return null
 //        val arrivalTimeNsPos = headerMap["arrivalTimeNs"] ?: return null  // old
 //        val recvSvTimeNsPos = headerMap["recvSvTimeNs"] ?: return null  // old
-        val fullBiasNsPos = headerMap["fullBiasNs"] ?: return null
-        val biasNsPos = headerMap["biasNs"] ?: return null
         val rxTimeNsPos = headerMap["rxTimeNs"] ?: return null
         val txTimeNsPos = headerMap["txTimeNs"] ?: return null
         val txTimeOffsetNsPos = headerMap["txTimeOffsetNs"] ?: return null
@@ -131,8 +129,6 @@ class CsvParser(val lines: Iterator<String>) {
                 gpsTimeNs = words.getOrNull(gpsTimeNsPos)?.toLongOrNull() ?: continue,
 //                arrivalTowNs = words.getOrNull(arrivalTimeNsPos)?.toLongOrNull() ?: continue,
 //                recvSvTowNs = words.getOrNull(recvSvTimeNsPos)?.toLongOrNull() ?: continue,
-                fullBiasNs = words.getOrNull(fullBiasNsPos)?.toLongOrNull() ?: continue,
-                biasNs = words.getOrNull(biasNsPos)?.toLongOrNull() ?: continue,
                 rxTimeNs = words.getOrNull(rxTimeNsPos)?.toLongOrNull() ?: continue,
                 txTimeNs = words.getOrNull(txTimeNsPos)?.toLongOrNull() ?: continue,
                 txTimeOffsetNs = words.getOrNull(txTimeOffsetNsPos)?.toLongOrNull() ?: continue,
