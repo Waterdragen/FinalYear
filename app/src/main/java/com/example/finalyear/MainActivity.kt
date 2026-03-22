@@ -17,7 +17,7 @@ class MainActivity : AppCompatActivity() {
     val bottomNavTable: HashMap<Int, PageOrder> = hashMapOf(
         R.id.navSurvey to PageOrder(0, PageSurvey()),
         R.id.navSurveyStore to PageOrder(1, PageSurveyStore()),
-        R.id.navMap to PageOrder(2, PageMap()),
+//        R.id.navMap to PageOrder(2, PageMap()),
     )
     var currentNavId = R.id.navSurvey
 

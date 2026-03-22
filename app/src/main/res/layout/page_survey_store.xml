@@ -107,7 +107,7 @@
             android:id="@+id/frameSurveyData"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="6"
+            android:layout_weight="5"
             android:weightSum="2"
             android:orientation="horizontal"
             app:layout_constraintStart_toStartOf="parent"
@@ -119,6 +119,14 @@
                 android:orientation="vertical"
                 android:layout_weight="1">
 
+                <!-- Horizontal rule -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="5dp"
+                    android:layout_marginBottom="5dp"
+                    android:background="@color/black"/>
+
                 <!-- Title -->
                 <TextView
                     android:layout_width="wrap_content"
@@ -129,16 +137,26 @@
                 <!-- Horizontal rule -->
                 <View
                     android:layout_width="match_parent"
-                    android:layout_height="2dp"
+                    android:layout_height="1dp"
                     android:layout_marginTop="5dp"
                     android:layout_marginBottom="5dp"
                     android:background="@color/black"/>
 
+                <!-- SPP Results -->
                 <TextView
                     android:id="@+id/textSppResult"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textSize="18sp"/>
+
+                <!-- SPP Diff Results -->
+                <TextView
+                    android:id="@+id/textSppDiffResult"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20sp"
+                    android:textSize="18sp"/>
+
             </LinearLayout>
 
             <LinearLayout
@@ -146,6 +164,14 @@
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:layout_weight="1">
+
+                <!-- Horizontal rule -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="5dp"
+                    android:layout_marginBottom="5dp"
+                    android:background="@color/black"/>
 
                 <!-- Title -->
                 <TextView
@@ -157,13 +183,32 @@
                 <!-- Horizontal rule -->
                 <View
                     android:layout_width="match_parent"
-                    android:layout_height="2dp"
+                    android:layout_height="1dp"
                     android:layout_marginTop="5dp"
                     android:layout_marginBottom="5dp"
                     android:background="@color/black"/>
 
+                <!-- DGNSS Results -->
                 <TextView
                     android:id="@+id/textDgnssResult"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="18sp"/>
+
+                <!-- DGNSS Diff Results -->
+                <TextView
+                    android:id="@+id/textDgnssDiffE"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20sp"
+                    android:textSize="18sp"/>
+                <TextView
+                    android:id="@+id/textDgnssDiffN"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="18sp"/>
+                <TextView
+                    android:id="@+id/textDgnssDiffH"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textSize="18sp"/>
@@ -174,8 +219,74 @@
             android:id="@+id/frameKnownPos"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="3"
+            android:layout_weight="4"
             android:orientation="vertical">
+
+            <!-- Horizontal rule -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="5dp"
+                android:layout_marginBottom="5dp"
+                android:background="@color/black"/>
+
+            <!-- Station name -->
+            <TextView
+                android:id="@+id/textStationName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Station name:"
+                android:textSize="18sp"/>
+
+            <!-- Position -->
+            <TextView
+                android:id="@+id/textStationPos"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Coordinates: "
+                android:textSize="18sp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="10dp">
+
+                <!-- Load stations -->
+                <ImageButton
+                    android:id="@+id/btnLoadStations"
+                    android:layout_width="40sp"
+                    android:layout_height="40sp"
+                    android:src="@drawable/ic_baseline_attach_file_24"
+                    android:background="@drawable/btn_style_primary"
+                    android:layout_marginStart="5sp"
+                    android:contentDescription="Load stations"
+                    app:tint="@color/gray_900" />
+
+                <!-- Change station -->
+                <ImageButton
+                    android:id="@+id/btnChangeStation"
+                    android:layout_width="40sp"
+                    android:layout_height="40sp"
+                    android:src="@drawable/ic_baseline_autorenew_24"
+                    android:background="@drawable/btn_style_primary"
+                    android:layout_marginStart="5sp"
+                    android:contentDescription="Change station"
+                    app:tint="@color/gray_900" />
+
+                <!-- Clear station -->
+                <ImageButton
+                    android:id="@+id/btnClearStation"
+                    android:layout_width="40sp"
+                    android:layout_height="40sp"
+                    android:src="@drawable/ic_baseline_clear_24"
+                    android:background="@drawable/btn_style_primary"
+                    android:layout_marginStart="5sp"
+                    android:contentDescription="Clear station"
+                    app:tint="@color/gray_900" />
+
+            </LinearLayout>
+
         </LinearLayout>
 
 

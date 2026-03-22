@@ -1,5 +1,6 @@
 package com.example.finalyear.io
 
+import com.example.finalyear.core.HkStation
 import com.example.finalyear.core.IonoModel
 import com.example.finalyear.core.NavData
 import com.example.finalyear.core.ObsData
@@ -145,14 +146,98 @@ class CsvParser(val lines: Iterator<String>) {
 
         return obsDataList
     }
+
+    fun tryParseHkStationList(): List<HkStation>? {
+        val header = if (lines.hasNext()) lines.next() else return null
+        val headerMap = parseHeader(header)
+
+        val stnNumPos = headerMap["stnNum"] ?: return null
+        val localityPos = headerMap["locality"] ?: return null
+        val eastingPos = headerMap["easting"] ?: return null
+        val northingPos = headerMap["northing"] ?: return null
+        val heightPos = headerMap["height"] ?: return null
+
+        val hkStationList = arrayListOf<HkStation>()
+        for (line in lines) {
+            val words = parseCsvLineRobust(line)
+
+            val hkStation = HkStation(
+                stnNum = words.getOrNull(stnNumPos) ?: continue,
+                locality = words.getOrNull(localityPos) ?: continue,
+                easting = words.getOrNull(eastingPos)?.toDoubleOrNull() ?: continue,
+                northing = words.getOrNull(northingPos)?.toDoubleOrNull() ?: continue,
+                height = words.getOrNull(heightPos)?.toDoubleOrNull() ?: continue,
+            )
+            hkStationList.add(hkStation)
+        }
+        return hkStationList
+    }
 }
 
-fun parseHeader(header: String): HashMap<String, Int> {
+fun parseHeader(header: String, robust: Boolean = false): HashMap<String, Int> {
     var index = 0
     val headerMap = hashMapOf<String, Int>()
-    for (word in header.split(",")) {
+    val split = if (robust) { parseCsvLineRobust(header) } else { header.split(",") }
+    for (word in split) {
         headerMap[word] = index
         index += 1
     }
     return headerMap
+}
+
+// takes into account of commas inside quotes
+fun parseCsvLineRobust(line: String): List<String> {
+    val chars = line.toList()
+    val result = mutableListOf<String>()
+    val builder = StringBuilder()
+    var inQuotes = false
+    var i = 0
+
+    while (i < line.length) {
+        val c = chars[i]
+
+        when {
+            c == '"' -> {
+                if (inQuotes) {
+                    // Check if next character is also quote (escaped quote)
+                    if (i + 1 < line.length && chars[i + 1] == '"') {
+                        builder.append('"')
+                        i++ // skip the second quote
+                    } else {
+                        // End of quoted field
+                        inQuotes = false
+                    }
+                } else {
+                    // Start of quoted field
+                    inQuotes = true
+                }
+            }
+
+            c == ',' -> {
+                if (inQuotes) {
+                    // Comma inside quotes -> part of the field
+                    builder.append(c)
+                } else {
+                    // End of field
+                    result.add(builder.toString())
+                    builder.clear()
+                }
+            }
+
+            else -> {
+                builder.append(c)
+            }
+        }
+        i++
+    }
+
+    // Pushing the last field
+    result.add(builder.toString())
+
+    // Handle case of trailing comma (empty last field)
+    if (line.isNotEmpty() && line.last() == ',' && !inQuotes) {
+        result.add("")
+    }
+
+    return result
 }

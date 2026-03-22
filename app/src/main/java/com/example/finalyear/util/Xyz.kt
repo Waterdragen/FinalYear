@@ -58,9 +58,7 @@ data class Xyz (var x: Double, var y: Double, var z: Double) {
         deltaPos[1] = dst.y - this.y
         deltaPos[2] = dst.z - this.z
 
-        val rotationMatrix = originWgs.rotationMatrix().transpose()
-
-        val enuVectorMeters = MathFn.matrixByColVecMult(rotationMatrix.transpose(), deltaPos)
+        val enuVectorMeters = MathFn.matrixByColVecMult(originWgs.rotationMatrix(), deltaPos)
         val east = enuVectorMeters[0]
         val north = enuVectorMeters[1]
         val up = enuVectorMeters[2]

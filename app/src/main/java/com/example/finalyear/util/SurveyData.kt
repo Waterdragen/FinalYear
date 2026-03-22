@@ -35,13 +35,14 @@ data class SurveyData private constructor (
                 val (_, lst) = obsDataListIter.next()
                 if (lst.size != filteredNavDataList.size) {  // missing measurements for epoch
                     obsDataListIter.remove()
+                    continue
                 }
                 var avgSnrDb = 0.0
                 for (obsData in lst) {
                     avgSnrDb += obsData.inner.signalToNoiseRatioDb
                 }
                 avgSnrDb /= lst.size
-                if (avgSnrDb < 10) {
+                if (avgSnrDb < 15) {
                     obsDataListIter.remove()
                 }
             }
@@ -50,7 +51,6 @@ data class SurveyData private constructor (
             return SurveyData(
                 baseName = baseName,
                 navDataList = filteredNavDataList,
-//                obsDataList = filteredObsDataList,
                 obsDataListByEpoch = obsDataListByEpoch,
             )
         }

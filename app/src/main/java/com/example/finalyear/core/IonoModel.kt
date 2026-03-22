@@ -71,10 +71,10 @@ data class IonoModel (
         // geomagnetic latitude of the Ionospheric Pierce Point (IPP) (semi-circles)
         val geomLatIPPSemiCircle = latISemiCircle + 0.064 * cos(longISemiCircle * PI - 5.08)
 
-        var localTimeSec = 86400 / 2.0 * longISemiCircle + gpsTowSec
-        localTimeSec %= 86400
+        var localTimeSec = 86400.0 / 2.0 * longISemiCircle + gpsTowSec
+        localTimeSec %= 86400.0
         if (localTimeSec < 0) {
-            localTimeSec += 86400
+            localTimeSec += 86400.0
         }
 
         // amplitude of the ionospheric delay (seconds)

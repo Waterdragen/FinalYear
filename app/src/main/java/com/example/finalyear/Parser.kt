@@ -117,7 +117,8 @@ class Parser {
         // The prn range for GPS is [1, 32], caller should ensure no other constellations use this list
         val partialNavDataList: MutableList<PartialNavData> = (1..32).map { index -> PartialNavData(index) }.toMutableList()
 
-        val obsDataList: Array<OverwritingQueue<ObsData>> = Array(32) { _ -> OverwritingQueue(10) }
+        val obsDataList = Array<OverwritingQueue<ObsData>>(32)
+        { _ -> OverwritingQueue(100) }
 
         val ionoCorrections: IonoModel = IonoModel()
 

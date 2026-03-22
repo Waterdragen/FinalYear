@@ -8,8 +8,8 @@
         android:id="@+id/navSurveyStore"
         android:icon="@drawable/ic_map_24px"
         android:title="Survey Store" />
-    <item
-        android:id="@+id/navMap"
-        android:icon="@drawable/ic_map_24px"
-        android:title="Map" />
+<!--    <item-->
+<!--        android:id="@+id/navMap"-->
+<!--        android:icon="@drawable/ic_map_24px"-->
+<!--        android:title="Map" />-->
 </menu>

@@ -6,10 +6,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import com.example.finalyear.core.HkStation
 import com.example.finalyear.core.MyException
 import com.example.finalyear.core.NavData
 import com.example.finalyear.core.ObsData
@@ -38,16 +40,29 @@ class PageSurveyStore : Fragment() {
 
     lateinit var btnLoadCsv: Button
     lateinit var btnCalculate: Button
+    lateinit var btnLoadStations: ImageButton
+    lateinit var btnClearStation: ImageButton
+
     lateinit var textLoadedFile: TextView
     lateinit var textNumNavSat: TextView
     lateinit var textNumObs: TextView
     lateinit var textSppResult: TextView
     lateinit var textDgnssResult: TextView
+    lateinit var textStationName: TextView
+    lateinit var textStationPos: TextView
+    lateinit var textSppDiffResult: TextView
+    lateinit var textDgnssDiffResultE: TextView
+    lateinit var textDgnssDiffResultN: TextView
+    lateinit var textDgnssDiffResultH: TextView
     lateinit var frameSurveyData: LinearLayout
 
 //    val surveyDataList: ArrayList<SurveyData> = arrayListOf()
     var surveyDataDgnss: SurveyData? = null
     var surveyDataSpp: SurveyData? = null
+    var calculatedSppEnh: Hk1980.Grid? = null
+    var calculatedDgnssEnh: Hk1980.Grid? = null
+    var hkStationList: List<HkStation>? = null
+    var nearestHkStationList: List<HkStation> = arrayListOf()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -63,37 +78,60 @@ class PageSurveyStore : Fragment() {
         btnLoadCsv = view.findViewById(R.id.btnLoadCsv)
         btnLoadCsv.setOnClickListener { onBtnLoadCsvPressed() }
         btnCalculate = view.findViewById(R.id.btnCalculate)
-        btnCalculate.setOnClickListener { onBtnCalculatPressed() }
+        btnCalculate.setOnClickListener { onBtnCalculatePressed() }
+        btnLoadStations = view.findViewById(R.id.btnLoadStations)
+        btnLoadStations.setOnClickListener { onBtnLoadStationsPressed() }
+        btnClearStation = view.findViewById(R.id.btnClearStation)
+        btnClearStation.setOnClickListener { onBtnClearStationPressed() }
+
         textLoadedFile = view.findViewById(R.id.textLoadedFile)
         textNumNavSat = view.findViewById(R.id.textNumNavSat)
         textNumObs = view.findViewById(R.id.textNumObs)
         textSppResult = view.findViewById(R.id.textSppResult)
         textDgnssResult = view.findViewById(R.id.textDgnssResult)
+        textStationName = view.findViewById(R.id.textStationName)
+        textStationPos = view.findViewById(R.id.textStationPos)
+        textSppDiffResult = view.findViewById(R.id.textSppDiffResult)
+        textDgnssDiffResultE = view.findViewById(R.id.textDgnssDiffE)
+        textDgnssDiffResultN = view.findViewById(R.id.textDgnssDiffN)
+        textDgnssDiffResultH = view.findViewById(R.id.textDgnssDiffH)
 
         frameSurveyData = view.findViewById(R.id.frameSurveyData)
     }
 
     private fun onBtnLoadCsvPressed() {
-        showCsvPickerDialog()
-    }
-
-    private fun onBtnCalculatPressed() {
-        processGpsPosition()
-    }
-
-    private fun showCsvPickerDialog() {
-        val files = listInternalCsvFiles()
+        val files = listInternalNavCsvFiles().sortedBy { it.name }
         val names = files.map { it.name }.toTypedArray()
 
         AlertDialog.Builder(requireContext())
             .setTitle("Choose a CSV file")
             .setItems(names) { _, index ->
-                loadCsvFile(files[index])
+                loadNavCsvFile(files[index])
             }
             .show()
     }
 
-    private fun listInternalCsvFiles(): List<File> {
+    private fun onBtnCalculatePressed() {
+        processGpsPosition()
+    }
+
+    private fun onBtnLoadStationsPressed() {
+        val files = listInternalStationsCsvFiles()
+        val names = files.map { it.name }.toTypedArray()
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Choose a CSV file")
+            .setItems(names) { _, index ->
+                loadStationCsvFile(files[index])
+            }
+            .show()
+    }
+
+    private fun onBtnClearStationPressed() {
+
+    }
+
+    private fun listInternalNavCsvFiles(): List<File> {
         val filePath = requireContext().filesDir
         if (!filePath.exists()) return emptyList()
         return filePath.listFiles { file ->
@@ -102,8 +140,17 @@ class PageSurveyStore : Fragment() {
         }?.toList() ?: emptyList()
     }
 
+    private fun listInternalStationsCsvFiles(): List<File> {
+        val filePath = requireContext().filesDir
+        if (!filePath.exists()) return emptyList()
+        return filePath.listFiles { file ->
+            file.isFile
+                    && file.name.endsWith("benchmarks.csv")
+        }?.toList() ?: emptyList()
+    }
 
-    private fun loadCsvFile(navFile: File) {
+
+    private fun loadNavCsvFile(navFile: File) {
         val context = requireContext()
         val baseName: String
         val navDataList: List<NavData>?
@@ -166,6 +213,23 @@ class PageSurveyStore : Fragment() {
         textLoadedFile.text = "Loaded file: ${navFile.name}"
         textNumNavSat.text = "Navigation satellite count: ${newSurveyData.navDataList.size}"
         textNumObs.text = "Number of observations: ${obsDataListSpp.size}"  // Number of raw measurements
+        clearContext()
+    }
+
+    private fun loadStationCsvFile(stationFile: File) {
+        val hkStationCsvParser = CsvParser.tryFromFile(stationFile)
+        if (hkStationCsvParser == null) {
+            showDialog("Warning", "File does not exist")
+            return
+        }
+        val hkStationList = hkStationCsvParser.tryParseHkStationList()
+        if (hkStationList == null) {
+            showDialog("Warning", "Failed to parse stations")
+            return
+        }
+        this.hkStationList = hkStationList
+        computeErrorWithClosestHkStation()
+        showDialog("Success", "Loaded HK stations list")
     }
 
     private fun showDialog(title: String, msg: String) {
@@ -231,10 +295,12 @@ class PageSurveyStore : Fragment() {
             dgnssAvgPos[i] /= dgnssPosList.size.toDouble()
         }
 
-        handleSuccessfullyResolvedLocation(
-            Hk1980.Grid(sppAvgPos[0], sppAvgPos[1], sppAvgPos[2]),
-            Hk1980.Grid(dgnssAvgPos[0], dgnssAvgPos[1], dgnssAvgPos[2]),
-        )
+        val sppEnh = Hk1980.Grid(sppAvgPos[0], sppAvgPos[1], sppAvgPos[2])
+        val dgnssEnh = Hk1980.Grid(dgnssAvgPos[0], dgnssAvgPos[1], dgnssAvgPos[2])
+        calculatedSppEnh = sppEnh
+        calculatedDgnssEnh = dgnssEnh
+        computeErrorWithClosestHkStation()
+        handleSuccessfullyResolvedLocation(sppEnh, dgnssEnh)
     }
 
     private fun leastSquareAdjustment(navList: List<NavData>,
@@ -431,21 +497,21 @@ class PageSurveyStore : Fragment() {
         }
     }
 
-    private fun showDialogSuccessfullyResolvedLocation(ecefPos: Xyz) {
-        val wgs84Pos = ecefPos.toPhiLamH()
-        val phiDeg = wgs84Pos.phi / Math.PI * 180.0
-        val lamDeg = wgs84Pos.lam / Math.PI * 180.0
-        val hk80Pos = Hk1980.Grid.fromWgs84Xyz(ecefPos)
-        val message = "The ecef location is $ecefPos\n" +
-                "The wgs 84 pos is phi=$phiDeg, lam=$lamDeg, h=${wgs84Pos.h}\n" +
-                "The HK1980 Grid pos is easting=${hk80Pos.e}, northing=${hk80Pos.n}, h=${hk80Pos.h}\n"
-        AlertDialog.Builder(requireContext())
-            .setTitle("Success")
-            .setMessage(message)
-            .setCancelable(true)
-            .setPositiveButton("OK") { _, _ -> }
-            .show()
-    }
+//    private fun showDialogSuccessfullyResolvedLocation(ecefPos: Xyz) {
+//        val wgs84Pos = ecefPos.toPhiLamH()
+//        val phiDeg = wgs84Pos.phi / Math.PI * 180.0
+//        val lamDeg = wgs84Pos.lam / Math.PI * 180.0
+//        val hk80Pos = Hk1980.Grid.fromWgs84Xyz(ecefPos)
+//        val message = "The ecef location is $ecefPos\n" +
+//                "The wgs 84 pos is phi=$phiDeg, lam=$lamDeg, h=${wgs84Pos.h}\n" +
+//                "The HK1980 Grid pos is easting=${hk80Pos.e}, northing=${hk80Pos.n}, h=${hk80Pos.h}\n"
+//        AlertDialog.Builder(requireContext())
+//            .setTitle("Success")
+//            .setMessage(message)
+//            .setCancelable(true)
+//            .setPositiveButton("OK") { _, _ -> }
+//            .show()
+//    }
 
     private fun handleSuccessfullyResolvedLocation(sppEnh: Hk1980.Grid, dgnssEnh: Hk1980.Grid) {
 
@@ -506,26 +572,6 @@ class PageSurveyStore : Fragment() {
                 uncertainty = sigma,
             )
         }
-//            .groupBy { it.inner.prn }
-//            .map { (_, measurements) ->
-//                val avgPseudorange = measurements
-//                    .map { it.pseudorange }
-//                    .average()
-//
-//                val avgUncertainty = measurements
-//                    .map { it.uncertainty }
-//                    .average()
-//
-//                val representative = measurements.maxByOrNull { it.inner.signalToNoiseRatioDb }
-//                    ?: measurements.last()
-//
-//                ObsDataWithRange(
-//                    inner = representative.inner,
-//                    pseudorange = avgPseudorange,
-//                    uncertainty = avgUncertainty,
-//                )
-//            }
-//            .sortedBy { it.inner.prn }
     }
 
     private fun adjustPseudorange(obsDataList: List<ObsDataWithRange>, stationRtcmMap: Map<Int, Rtcm>): List<ObsDataWithRange> {
@@ -553,6 +599,7 @@ class PageSurveyStore : Fragment() {
             val age = time - dgps.t0.asGpsTimeSecs()  // Time of base station
 
             val correctedPseudorange = obsData.pseudorange - (dgps.prc + dgps.rrc * age)
+            Log.d("GNSS", "PRC: ${dgps.prc}")
             obsData.pseudorange = correctedPseudorange
 
             adjustedObsDataList.add(obsData)  // Push cloned to new list
@@ -560,5 +607,68 @@ class PageSurveyStore : Fragment() {
         return adjustedObsDataList
     }
 
+    fun computeErrorWithClosestHkStation() {
+        val sppEnh = calculatedSppEnh ?: return
+        val dgnssEnh = calculatedDgnssEnh ?: return
+        val hkStationList = hkStationList ?: return
+        nearestHkStationList = HkStation.findNearest(
+            hkStationList = hkStationList,
+            easting = dgnssEnh.e,
+            northing = dgnssEnh.n
+        )
+        val hkStation = nearestHkStationList.getOrNull(0) ?: return  // use the nearest station
+        // If the station is close enough, we are probably surveying the station
+        val dE = dgnssEnh.e - hkStation.easting
+        val dN = dgnssEnh.n - hkStation.northing
+        if (sqrt(dE * dE + dN * dN) > 100) return
+
+        textStationName.text = "Station name: ${hkStation.stnNum} (${hkStation.locality})"
+        textStationPos.text = String.format("Coordinates: (E %.3f, N %.3f, H %.3f)", hkStation.easting, hkStation.northing, hkStation.height)
+
+        val sppDE = sppEnh.e - hkStation.easting
+        val sppDN = sppEnh.n - hkStation.northing
+        val sppDH = sppEnh.h - hkStation.height
+        val dgnssDE = dgnssEnh.e - hkStation.easting
+        val dgnssDN = dgnssEnh.n - hkStation.northing
+        val dgnssDH = dgnssEnh.h - hkStation.height
+        textSppDiffResult.text = String.format("dE: %+.2f\ndN: %+.2f\ndH: %+.2f\n", sppDE, sppDN, sppDH)
+        textDgnssDiffResultE.text = String.format("dE: %+.2f", dgnssDE)
+        textDgnssDiffResultN.text = String.format("dN: %+.2f", dgnssDN)
+        textDgnssDiffResultH.text = String.format("dH: %+.2f", dgnssDH)
+
+        dgnssDiffChangeColor(textDgnssDiffResultE, sppDE, dgnssDE)
+        dgnssDiffChangeColor(textDgnssDiffResultN, sppDN, dgnssDN)
+        dgnssDiffChangeColor(textDgnssDiffResultH, sppDH, dgnssDH)
+    }
+
+    fun dgnssDiffChangeColor(textView: TextView, deltaSpp: Double, deltaDgnss: Double) {
+        val red = 0xff_dd4444u.toInt()
+        val green = 0xff_44aa44u.toInt()
+        val darkGray = 0xff_444444u.toInt()
+        val improvedAbs = abs(deltaSpp) - abs(deltaDgnss)
+        val improvedRel = improvedAbs / abs(deltaSpp)
+
+        val color = if (abs(improvedAbs) < 1 || abs(improvedRel) < 0.02) {
+            darkGray
+        } else if (improvedAbs > 0) {
+            green
+        } else {
+            red
+        }
+        textView.setTextColor(color)
+    }
+
+    fun clearContext() {
+        calculatedSppEnh = null
+        calculatedDgnssEnh = null
+        textSppResult.text = ""
+        textSppDiffResult.text = ""
+        textDgnssResult.text = ""
+        textDgnssDiffResultE.text = ""
+        textDgnssDiffResultN.text = ""
+        textDgnssDiffResultH.text = ""
+        textStationName.text = ""
+        textStationPos.text = ""
+    }
 
 }

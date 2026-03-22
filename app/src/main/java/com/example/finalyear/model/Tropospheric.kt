@@ -39,7 +39,7 @@ object Tropospheric {
 
     val assumedMetStats = MeteorologyStats.fromRh(
         pressureHpa = 1013.25,
-        tempKelvin = 301.0,  // 28°C
+        tempKelvin = 300.0,  // 27°C
         rh = 0.75,  // 75% relative humidity
     )
 
