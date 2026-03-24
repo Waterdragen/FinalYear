@@ -28,13 +28,13 @@ data class Xyz (var x: Double, var y: Double, var z: Double) {
         val p = sqrt(x * x + y * y)
         val theta = atan2(a * z,b * p)
 
-        val lam = atan2(y, x) % (2 * Math.PI)
+        val lam = atan2(y, x).mod(2 * Math.PI)
 
         val sinTheta = sin(theta)
         val cosTheta = cos(theta)
         val atanNumer = z + eccPrime2 * b * sinTheta.pow(3.0)
         val atanDenom = p - ecc2 * a * cosTheta.pow(3.0)
-        val phi = atan2(atanNumer, atanDenom) % (2 * Math.PI)
+        val phi = atan2(atanNumer, atanDenom).mod(2 * Math.PI)
 
         val N = ellipsoid.primeVerticalN(phi)
         var h = p / cos(phi) - N
@@ -50,44 +50,6 @@ data class Xyz (var x: Double, var y: Double, var z: Double) {
     }
 
     fun toTopocentricAED(dst: Xyz): TopocentricAED {
-        // Calculate elevation and azimuth
-        val originWgs = this.toPhiLamH()
-
-        val deltaPos = SimpleMatrix(3, 1)
-        deltaPos[0] = dst.x - this.x
-        deltaPos[1] = dst.y - this.y
-        deltaPos[2] = dst.z - this.z
-
-        val enuVectorMeters = MathFn.matrixByColVecMult(originWgs.rotationMatrix(), deltaPos)
-        val east = enuVectorMeters[0]
-        val north = enuVectorMeters[1]
-        val up = enuVectorMeters[2]
-
-        // - calculate azimuth, elevation and height from the enu values
-        val horizontalDistance = hypot(east, north)
-        var azimuth: Double
-        val elevationRadians: Double
-
-        if (horizontalDistance < 1e-22) {
-            elevationRadians = PI / 2.0
-            azimuth = 0.0
-        } else {
-            elevationRadians = atan2(up, horizontalDistance)
-            azimuth = atan2(east, north)
-        }
-        if (azimuth < 0.0) {
-            azimuth += 2 * PI
-        }
-        val distance = sqrt(
-            deltaPos[0] * deltaPos[0]
-            + deltaPos[1] * deltaPos[1]
-            + deltaPos[2] * deltaPos[2]
-        )
-
-        return TopocentricAED(
-            azimuth = azimuth,
-            elevation = elevationRadians,
-            distance = distance,
-        )
+        return TopocentricAED.fromXyzLine(this, dst)
     }
 }

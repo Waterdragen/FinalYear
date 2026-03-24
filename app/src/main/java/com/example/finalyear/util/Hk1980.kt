@@ -1,6 +1,5 @@
 package com.example.finalyear.util
 
-import android.util.Log
 import kotlin.math.*
 
 object Hk1980: Ellipsoid {
@@ -14,9 +13,9 @@ object Hk1980: Ellipsoid {
     const val tx = 162.619
     const val ty = 276.961
     const val tz = 161.763
-    val rx = radians(0.067741 / 3600.0)  // arcsecond to radians
-    val ry = radians(-2.243649 / 3600.0)
-    val rz = radians(-1.158827 / 3600.0)
+    val rx = Math.toRadians(0.067741 / 3600.0)  // arcsecond to radians
+    val ry = Math.toRadians(-2.243649 / 3600.0)
+    val rz = Math.toRadians(-1.158827 / 3600.0)
     const val scale = 1 + 1.094239e-6
 
     fun fromWgs84Xyz(wgs: Xyz): Xyz {
@@ -74,13 +73,8 @@ object Hk1980: Ellipsoid {
             }
         }
     }
-
-    private fun radians(deg: Double): Double {
-        return deg * PI / 180.0
-    }
-
-    private fun dmsInRadians(d: Double, m: Double, s: Double): Double {
-        return radians(d + m / 60.0 + s / 3600.0)
-    }
 }
+
+private fun dmsInRadians(d: Double, m: Double, s: Double): Double =
+    Math.toRadians(d + m / 60.0 + s / 3600.0)
 
