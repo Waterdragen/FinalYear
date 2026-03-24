@@ -1,7 +1,10 @@
-package com.example.finalyear.util
+package com.example.finalyear.coord
 
 import org.ejml.simple.SimpleMatrix
-import kotlin.math.*
+import kotlin.math.PI
+import kotlin.math.atan2
+import kotlin.math.hypot
+import kotlin.math.sqrt
 
 data class TopocentricAED(
     val azimuth: Double,

@@ -1,7 +1,7 @@
 package com.example.finalyear.io
 
 import com.example.finalyear.core.HkStation
-import com.example.finalyear.core.IonoModel
+import com.example.finalyear.model.Ionospheric
 import com.example.finalyear.core.NavData
 import com.example.finalyear.core.ObsData
 import org.joda.time.DateTime
@@ -87,14 +87,14 @@ class CsvParser(val lines: Iterator<String>) {
             navData.fitInterval = headerMap["fitInterval"]?.let { pos -> words.getOrNull(pos)?.toDoubleOrNull() } ?: continue
 
 
-            val ionoCorrection = IonoModel()
+            val ionoCorrection = Ionospheric()
             for (i in 0 until 4) {
                 val alpha = alphaPos[i]?.let { pos -> words.getOrNull(pos)?.toDoubleOrNull() } ?: 0.0
                 val beta = betaPos[i]?.let { pos -> words.getOrNull(pos)?.toDoubleOrNull() } ?: 0.0
                 ionoCorrection.alpha[i] = alpha
                 ionoCorrection.beta[i] = beta
             }
-            navData.ionoCorrection = ionoCorrection
+            navData.iono = ionoCorrection
 
             navDataList.add(navData)
         }
@@ -107,8 +107,6 @@ class CsvParser(val lines: Iterator<String>) {
 
         val prnPos = headerMap["prn"] ?: return null
         val gpsTimeNsPos = headerMap["gpsTimeNs"] ?: return null
-//        val arrivalTimeNsPos = headerMap["arrivalTimeNs"] ?: return null  // old
-//        val recvSvTimeNsPos = headerMap["recvSvTimeNs"] ?: return null  // old
         val rxTimeNsPos = headerMap["rxTimeNs"] ?: return null
         val txTimeNsPos = headerMap["txTimeNs"] ?: return null
         val txTimeOffsetNsPos = headerMap["txTimeOffsetNs"] ?: return null

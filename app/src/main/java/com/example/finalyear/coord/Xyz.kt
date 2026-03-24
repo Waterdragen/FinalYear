@@ -1,19 +1,19 @@
-package com.example.finalyear.util
+package com.example.finalyear.coord
 
-import com.example.finalyear.MathFn
 import org.ejml.simple.SimpleMatrix
-import kotlin.math.*
+import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 data class Xyz (var x: Double, var y: Double, var z: Double) {
     companion object {
         private const val ECEF_NEAR_POLE_THRESHOLD = 1.0
 
-        fun from(doubleArray: DoubleArray): Xyz {
-            return Xyz(doubleArray[0], doubleArray[1], doubleArray[2])
-        }
-
-        fun from(vector: SimpleMatrix): Xyz {
-            return Xyz(vector[0], vector[1], vector[2])
+        fun fromMatrixRow(matrix: SimpleMatrix, row: Int): Xyz {
+            return Xyz(matrix[row, 0], matrix[row, 1], matrix[row, 2])
         }
     }
 
@@ -26,7 +26,7 @@ data class Xyz (var x: Double, var y: Double, var z: Double) {
         val eccPrime2 = ellipsoid.eccPrime2
 
         val p = sqrt(x * x + y * y)
-        val theta = atan2(a * z,b * p)
+        val theta = atan2(a * z, b * p)
 
         val lam = atan2(y, x).mod(2 * Math.PI)
 

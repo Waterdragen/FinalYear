@@ -1,6 +1,6 @@
 @file:Suppress("ConstPropertyName", "unused")
 
-package com.example.finalyear
+package com.example.finalyear.math
 
 object Const {
     const val c = 299792458.0      // Speed of light (m/s)
@@ -11,12 +11,19 @@ object Const {
     const val OmegaE = 7.2921151467e-5  // Earth rotation rate (rad/s)
     const val RelativisticF = -4.442807633e-10
 
-    const val HALF_WEEK = 3.5 * 60 * 60 * 24
-    const val NS_PER_WEEK = 604_800.0 * 1e9
+    const val HALF_WEEK = 302400.0
+    const val HALF_WEEK_NS = 302400_000_000_000L
+
+    const val L1_FREQ_HZ = 1.57542e9
 
     // Tropospheric correction
     const val B_HYDROSTATIC = 0.0035716
     const val C_HYDROSTATIC = 0.082456
     const val B_NON_HYDROSTATIC = 0.0018576
     const val C_NON_HYDROSTATIC = 0.062741
+
+    const val GPS_CHIP_WIDTH_T_C_SEC = 1e-6
+    const val GPS_BANDWIDTH = 1
+    const val GPS_CORRELATOR_SPACING_IN_CHIPS = 0.1
+    const val GPS_DLL_AVERAGING_TIME_SEC = 20e-3
 }

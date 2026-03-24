@@ -12,8 +12,6 @@ import org.junit.Assert.*
 class ExampleUnitTest {
     @Test
     fun addition_isCorrect() {
-        println("${GpsTime.fromNanos(1457459210001000000).toDateTime()}")
-
         assertEquals(4, 2 + 2)
     }
 }

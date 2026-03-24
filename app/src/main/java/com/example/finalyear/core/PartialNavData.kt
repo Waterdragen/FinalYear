@@ -1,6 +1,6 @@
 package com.example.finalyear.core
 
-import com.example.finalyear.Parser
+import com.example.finalyear.util.Parser
 
 data class PartialNavData (
     val prn: Int,

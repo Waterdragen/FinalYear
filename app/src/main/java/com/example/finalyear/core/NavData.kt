@@ -1,7 +1,9 @@
 package com.example.finalyear.core
 
-import com.example.finalyear.Const
-import com.example.finalyear.util.Xyz
+import com.example.finalyear.math.Const
+import com.example.finalyear.math.MathFn
+import com.example.finalyear.model.Ionospheric
+import com.example.finalyear.coord.Xyz
 import org.joda.time.DateTime
 import java.io.File
 import kotlin.math.*
@@ -41,7 +43,7 @@ data class NavData(
     var spare1: Double = 0.0,
     var spare2: Double = 0.0,
 
-    var ionoCorrection: IonoModel = IonoModel(),
+    var iono: Ionospheric = Ionospheric(),
 ) {
     companion object {
         val FIELDS = arrayOf(
@@ -136,10 +138,10 @@ data class NavData(
         sb.append(spare1.toString()); sb.append(',')
         sb.append(spare2.toString()); sb.append(',')
         for (i in 0 until 4) {
-            sb.append(ionoCorrection.alpha[i].toString()); sb.append(',')
+            sb.append(iono.alpha[i].toString()); sb.append(',')
         }
         for (i in 0 until 4) {
-            sb.append(ionoCorrection.beta[i].toString()); sb.append(',')
+            sb.append(iono.beta[i].toString()); sb.append(',')
         }
         sb.append('\n')
 
@@ -213,5 +215,55 @@ data class NavData(
 
     fun satelliteClockErrorSec(tk: Double): Double {
         return svClockBias + svClockDrift * tk + svClockDriftRate * tk * tk - tgd
+    }
+
+    fun relativisticCorrSec(e: Double): Double {
+        return Const.RelativisticF * ecc * sqrtA * sin(e)
+    }
+
+    fun calculateSatPosAndClock(obsData: ObsDataWithRange,
+                                approxPseudorange: Double,
+                                rxClockErrSec: Double): Pair<Xyz, Double> {
+        val transmissionTime = approxPseudorange / Const.c
+        var t = obsData.inner.rxTimeNs * 1e-9 - transmissionTime - rxClockErrSec
+        var tk = MathFn.fixWeekRollover(t - t0)
+
+        // Satellite clock error
+        var satClockErrSec = satelliteClockErrorSec(tk)
+        t += satClockErrSec
+        tk = MathFn.fixWeekRollover(t - t0)
+
+        // Mean motion (n) and Mean anomaly (M)
+        val n = meanMotion()
+        val m = meanAnomaly(n, tk)
+
+        // Eccentric anomaly (E) and True anomaly (θ)
+        val e = eccAnomaly(m)
+        val theta = trueAnomaly(e)
+
+        // Argument of latitude (φ), Orbit radius (r), inclination (i)
+        var phi = argumentOfLatitude(theta)
+        var r = orbitRadius(e)
+        var i = i0 + dI * tk
+
+        // Corrected argument of latitude (φ), Orbit radius (r), inclination (i)
+        phi += argumentOfLatitudeCorrection(phi)
+        r += radiusCorrection(phi)
+        i += inclinationCorrection(phi)
+
+        // GPS Positions in the orbital plane
+        val (x0, y0) = MathFn.gpsPosOrbitalPlane(r, phi)
+
+        // Longitude of ascending node (Ω_k)
+        val omegaK = longitudeOfAscendingNode(tk, approxPseudorange)
+
+        val pos = MathFn.gpsPosEcef(x0, y0, omegaK, i)
+
+        // Satellite clock error + relativistic correction
+        satClockErrSec = satelliteClockErrorSec(tk)
+        val relCorrectionSec = relativisticCorrSec(e)
+        val satClockErrM = (satClockErrSec + relCorrectionSec) * Const.c
+
+        return Pair(pos, satClockErrM)
     }
 }

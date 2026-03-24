@@ -1,12 +1,12 @@
 package com.example.finalyear.util
 
 import com.example.finalyear.core.NavData
+import com.example.finalyear.core.ObsData
 import com.example.finalyear.core.ObsDataWithRange
 
 data class SurveyData private constructor (
     val baseName: String,
     val navDataList: List<NavData>,
-//    val obsDataList: List<ObsDataWithRange>,
     val obsDataListByEpoch: Map<Long, List<ObsDataWithRange>>,
 ) {
     companion object {
@@ -46,7 +46,6 @@ data class SurveyData private constructor (
                     obsDataListIter.remove()
                 }
             }
-
 
             return SurveyData(
                 baseName = baseName,

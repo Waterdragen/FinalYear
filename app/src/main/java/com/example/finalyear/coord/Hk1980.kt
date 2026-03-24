@@ -1,4 +1,4 @@
-package com.example.finalyear.util
+package com.example.finalyear.coord
 
 import kotlin.math.*
 
@@ -77,4 +77,3 @@ object Hk1980: Ellipsoid {
 
 private fun dmsInRadians(d: Double, m: Double, s: Double): Double =
     Math.toRadians(d + m / 60.0 + s / 3600.0)
-

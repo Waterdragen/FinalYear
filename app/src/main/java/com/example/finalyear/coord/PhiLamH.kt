@@ -1,7 +1,8 @@
-package com.example.finalyear.util
+package com.example.finalyear.coord
 
 import org.ejml.simple.SimpleMatrix
-import kotlin.math.*
+import kotlin.math.cos
+import kotlin.math.sin
 
 data class PhiLamH (var phi: Double, var lam: Double, var h: Double) {
     fun rotationMatrix(): SimpleMatrix {

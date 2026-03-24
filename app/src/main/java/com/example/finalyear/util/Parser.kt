@@ -1,15 +1,16 @@
 @file:Suppress("unused")
 
-package com.example.finalyear
+package com.example.finalyear.util
 
 import android.location.GnssMeasurement
 import android.location.GnssMeasurementsEvent
 import android.location.GnssStatus
 import android.util.Log
-import com.example.finalyear.core.IonoModel
+import com.example.finalyear.GpsTime
+import com.example.finalyear.PageSurvey
+import com.example.finalyear.model.Ionospheric
 import com.example.finalyear.core.ObsData
 import com.example.finalyear.core.PartialNavData
-import com.example.finalyear.util.OverwritingQueue
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
 import java.util.concurrent.TimeUnit
@@ -118,9 +119,9 @@ class Parser {
         val partialNavDataList: MutableList<PartialNavData> = (1..32).map { index -> PartialNavData(index) }.toMutableList()
 
         val obsDataList = Array<OverwritingQueue<ObsData>>(32)
-        { _ -> OverwritingQueue(100) }
+        { _ -> OverwritingQueue(600) }
 
-        val ionoCorrections: IonoModel = IonoModel()
+        val ionoCorrections: Ionospheric = Ionospheric()
 
         fun pushSubframe(prn: Int, messageType: Int, messageId: Int, rawData: ByteArray): PartialNavData? {
             // Already shifted right by 8, should always be 1
@@ -151,12 +152,6 @@ class Parser {
 
             val clock = event.clock
 
-//            val arrivalTime = clock.timeNanos - clock.fullBiasNanos  // old
-//            val gpsTime = GpsTime.fromNanos(arrivalTime)
-//
-//            val gpsWeekEpochNs = gpsTime.gpsWeekEpochNano()
-//            val arrivalTimeSinceGpsWeekNs = arrivalTime - gpsWeekEpochNs
-
             val fullBiasNs = if (clock.hasFullBiasNanos()) { clock.fullBiasNanos } else return
             val biasNs = if (clock.hasBiasNanos()) { clock.biasNanos.toLong() } else { 0L }
 
@@ -177,9 +172,7 @@ class Parser {
                 obsDataList[measurement.svid - 1].push(ObsData(
                     prn = measurement.svid,
                     gpsTimeNs = rxTimeNsSinceEpoch,
-                    // arrivalTowNs = arrivalTimeSinceGpsWeekNs,  // old
                     rxTimeNs = rxTimeNs,
-//                    recvSvTowNs = measurement.receivedSvTimeNanos,  // old
                     txTimeNs = measurement.receivedSvTimeNanos,
                     txTimeOffsetNs = measurement.timeOffsetNanos.toLong(),
 
@@ -195,7 +188,7 @@ class Parser {
 
         fun setIonoCorrections() {
             for (navData in partialNavDataList) {
-                navData.inner.ionoCorrection = ionoCorrections.clone()
+                navData.inner.iono = ionoCorrections.clone()
             }
         }
 

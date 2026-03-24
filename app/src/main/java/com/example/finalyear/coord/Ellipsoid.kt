@@ -1,6 +1,8 @@
-package com.example.finalyear.util
+package com.example.finalyear.coord
 
-import kotlin.math.*
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 interface Ellipsoid {
     val a: Double  // semi-major axis

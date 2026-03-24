@@ -1,8 +1,7 @@
 package com.example.finalyear.model
 
-import com.example.finalyear.Const
-import com.example.finalyear.util.Wgs84
-import com.example.finalyear.util.Xyz
+import com.example.finalyear.math.Const
+import com.example.finalyear.coord.Xyz
 import org.ejml.simple.SimpleMatrix
 import kotlin.math.*
 
@@ -43,17 +42,28 @@ object Tropospheric {
         rh = 0.75,  // 75% relative humidity
     )
 
-    fun calculateTroposphericDelayMeters(
-        userPosEcefMeters: DoubleArray,
-        satPosEcefMeters: SimpleMatrix,
+    fun delays(userPos: Xyz,
+               satPosList: SimpleMatrix): SimpleMatrix {
+        val numRows = satPosList.numRows()
+        val troposphericDelayList = SimpleMatrix(numRows, 1)
+        for (i in 0 until numRows) {
+            val satPos = Xyz.fromMatrixRow(satPosList, row = i)
+            val tropoDelay = saastamoinenDelaySec(userPos, satPos)
+            troposphericDelayList[i] = tropoDelay
+        }
+        return troposphericDelayList
+    }
+
+    fun saastamoinenDelaySec(
+        userPos: Xyz,
+        satPos: Xyz,
     ): Double {
-        val elevationRad = Xyz.from(userPosEcefMeters)
-            .toTopocentricAED(Xyz.from(satPosEcefMeters))
+        val elevationRad = userPos.toTopocentricAED(satPos)
             .elevation
         if (!elevationRad.isFinite() || elevationRad <= 0.0) {
             return 0.0  // No adjustments for invalid values
         }
-        val originWgs = Xyz.from(userPosEcefMeters).toPhiLamH()
+        val originWgs = userPos.toPhiLamH()
         val geoidHeight = 0.0  // TODO: calculate geoid height
         val heightAboveSeaLevel = originWgs.h - geoidHeight
 

@@ -1,16 +1,38 @@
-package com.example.finalyear.core
+package com.example.finalyear.model
 
-import com.example.finalyear.util.Wgs84
-import com.example.finalyear.util.Xyz
+import com.example.finalyear.math.Const
+import com.example.finalyear.core.NavData
+import com.example.finalyear.core.ObsDataWithRange
+import com.example.finalyear.coord.Xyz
 import org.ejml.simple.SimpleMatrix
 import kotlin.math.*
 
-data class IonoModel (
+data class Ionospheric (
     var alpha: DoubleArray = doubleArrayOf(0.0, 0.0, 0.0, 0.0),
     var beta: DoubleArray = doubleArrayOf(0.0, 0.0, 0.0, 0.0),
 ) {
+    companion object {
+        fun delays(navDataList: List<NavData>,
+                   obsDataList: List<ObsDataWithRange>,
+                   userPos: Xyz,
+                   satPosList: SimpleMatrix,
+                   frequencyHz: Double): SimpleMatrix {
+            val numOfObs = obsDataList.size
+            val ionoDelayList = SimpleMatrix(numOfObs, 1)
+            for (i in 0 until numOfObs) {
+                ionoDelayList[i] = navDataList[i].iono.klobucharDelaySec(
+                    userPosEcef = userPos,
+                    satPosEcef = Xyz.fromMatrixRow(satPosList, row = i),
+                    rxTowSec = obsDataList[i].inner.rxTimeNs * 1e-9,
+                    frequencyHz = frequencyHz,
+                )
+            }
+            return ionoDelayList
+        }
+    }
+
     override fun equals(other: Any?): Boolean {
-        if (other !is IonoModel) return false
+        if (other !is Ionospheric) return false
         return alpha.contentEquals(other.alpha)
                 && beta.contentEquals(other.beta)
     }
@@ -21,8 +43,8 @@ data class IonoModel (
         return result
     }
 
-    fun clone(): IonoModel {
-        return IonoModel(
+    fun clone(): Ionospheric {
+        return Ionospheric(
             alpha = alpha.clone(),
             beta = beta.clone(),
         )
@@ -33,17 +55,16 @@ data class IonoModel (
         beta = doubleArrayOf(0.0, 0.0, 0.0, 0.0)
     }
 
-    fun klobucharCorrectionSec(
-        userPosEcefMeters: DoubleArray,
-        satPosEcefMeters: SimpleMatrix,
-        gpsTowSec: Double,
+    fun klobucharDelaySec(
+        userPosEcef: Xyz,
+        satPosEcef: Xyz,
+        rxTowSec: Double,
         frequencyHz: Double,
     ): Double {
-        val topocentricAED = Xyz.from(userPosEcefMeters)
-            .toTopocentricAED(Xyz.from(satPosEcefMeters))
+        val topocentricAED = userPosEcef.toTopocentricAED(satPosEcef)
         val azimuth = topocentricAED.azimuth
         val elevationRadians = topocentricAED.elevation
-        val originWgs = Xyz.from(userPosEcefMeters).toPhiLamH()
+        val originWgs = userPosEcef.toPhiLamH()
 
         val elevationSemiCircle = elevationRadians / PI
         val azimuthSemiCircle = azimuth / PI
@@ -71,7 +92,7 @@ data class IonoModel (
         // geomagnetic latitude of the Ionospheric Pierce Point (IPP) (semi-circles)
         val geomLatIPPSemiCircle = latISemiCircle + 0.064 * cos(longISemiCircle * PI - 5.08)
 
-        var localTimeSec = 86400.0 / 2.0 * longISemiCircle + gpsTowSec
+        var localTimeSec = 86400.0 / 2.0 * longISemiCircle + rxTowSec
         localTimeSec %= 86400.0
         if (localTimeSec < 0) {
             localTimeSec += 86400.0
@@ -114,8 +135,7 @@ data class IonoModel (
         }
 
         // apply factor for frequency bands other than L1
-        val l1FreqHz = 1.57542e9
-        ionoDelaySec *= (l1FreqHz * l1FreqHz) / (frequencyHz * frequencyHz)
+        ionoDelaySec *= (Const.L1_FREQ_HZ * Const.L1_FREQ_HZ) / (frequencyHz * frequencyHz)
 
         return ionoDelaySec
     }
