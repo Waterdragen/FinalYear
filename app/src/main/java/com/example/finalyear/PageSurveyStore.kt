@@ -346,13 +346,11 @@ class PageSurveyStore : Fragment() {
                 throw MyException.LsConvergeFail("Least squares failed to converge after $iterCount iterations")
             }
 
-            val approxRxTow = arrivalTowSec - posEcef[3] / Const.c
-
             posAndRangeResidual = MathFn.calculateSatPosAndPseudorangeResidual(
                 navDataList = navList,
                 obsDataList = obsList,
                 posEcef = posEcef,
-                arrivalTowSec = approxRxTow,
+                arrivalTowSec = arrivalTowSec,
                 weekNum = weekNum
             )
 
@@ -374,7 +372,7 @@ class PageSurveyStore : Fragment() {
                 if (weightedGeometryMatrixInv == null || iterCount == 1) {
                     weightedGeometryMatrixInv = covarMatrixMetersSq.invert()
                 }
-                val hMatrix = MathFn.calculateHMatrix(weightedGeometryMatrixInv!!, geometryMatrix)  // !! overwritten by previous condition
+                val hMatrix = MathFn.calculateHMatrix(weightedGeometryMatrixInv!!, geometryMatrix)  // !! overwritten by previous condition, (A^T * P * A) ^-1
                 hMatrix.mult(geometryMatrix.transpose()).mult(weightedGeometryMatrixInv!!)
             }
 
@@ -555,7 +553,10 @@ class PageSurveyStore : Fragment() {
         return obsDataList.map { obsData ->
             val txTimeNs = obsData.txTimeNs + obsData.txTimeOffsetNs
             var deltaNs = obsData.rxTimeNs - txTimeNs
-            if (deltaNs < 0) {
+            if (deltaNs > WEEK_NS / 2) {
+                deltaNs -= WEEK_NS
+            }
+            if (deltaNs < -WEEK_NS / 2) {
                 deltaNs += WEEK_NS
             }
             val pseudorange = deltaNs * 1e-9 * Const.c

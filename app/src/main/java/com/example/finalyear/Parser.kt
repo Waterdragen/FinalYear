@@ -506,7 +506,7 @@ class Parser {
                 var workingIndex = bytePos.index + i
                 val wordIndex = workingIndex / GpsEphemerisDecoder.WORD_SIZE_BITS
                 // account for 2 bit padding for every 30 bit word
-                workingIndex += (wordIndex + 1)  * GpsEphemerisDecoder.WORD_PADDING_BITS
+                workingIndex += (wordIndex + 1) * GpsEphemerisDecoder.WORD_PADDING_BITS
                 val byteIndex = workingIndex / GpsEphemerisDecoder.BYTE_AS_BITS
                 val byteOffset = workingIndex % GpsEphemerisDecoder.BYTE_AS_BITS
 

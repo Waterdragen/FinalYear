@@ -77,13 +77,14 @@ object MathFn {
     }
 
     fun calculateCorrectedTransmitTowAndWeek(navData: NavData, arrivalTowSec: Double, weekNum: Double, pseudorange: Double): Pair<Double, Double> {
+        val SEC_PER_WEEK = 604800
         var weekNum = weekNum
         var rxTowAtTimeOfTransmission = arrivalTowSec - pseudorange / Const.c
-        if (rxTowAtTimeOfTransmission < 0) {
-            rxTowAtTimeOfTransmission += 604800
+        if (rxTowAtTimeOfTransmission < -SEC_PER_WEEK / 2) {
+            rxTowAtTimeOfTransmission += SEC_PER_WEEK
             weekNum -= 1
-        } else if (rxTowAtTimeOfTransmission > 604800) {
-            rxTowAtTimeOfTransmission -= 604800
+        } else if (rxTowAtTimeOfTransmission > SEC_PER_WEEK / 2) {
+            rxTowAtTimeOfTransmission -= SEC_PER_WEEK
             weekNum += 1
         }
 
@@ -91,11 +92,11 @@ object MathFn {
         val clockCorrSec = satClockCorr.satClockCorrectionMeters / Const.c
 
         var rxTowAtTimeOfTransmissionCorrected = rxTowAtTimeOfTransmission + clockCorrSec
-        if (rxTowAtTimeOfTransmissionCorrected < 0) {
-            rxTowAtTimeOfTransmissionCorrected += 604800
+        if (rxTowAtTimeOfTransmissionCorrected < -SEC_PER_WEEK / 2) {
+            rxTowAtTimeOfTransmissionCorrected += SEC_PER_WEEK
             weekNum -= 1
-        } else if (rxTowAtTimeOfTransmissionCorrected > 604800) {
-            rxTowAtTimeOfTransmissionCorrected -= 604800
+        } else if (rxTowAtTimeOfTransmissionCorrected > SEC_PER_WEEK / 2) {
+            rxTowAtTimeOfTransmissionCorrected -= SEC_PER_WEEK
             weekNum += 1
         }
 
@@ -239,8 +240,7 @@ object MathFn {
         arrivalTowSec: Double,
         weekNum: Double,
     ): PositionAndRangeResidual {
-        var arrivalTowSec = arrivalTowSec
-        val correctedArrivalTowSec = arrivalTowSec - posEcef[3] / Const.c  // new
+        val correctedArrivalTowSec = arrivalTowSec - posEcef[3] / Const.c
         var weekNum = weekNum
 
         val numSats = navDataList.size
