@@ -26,7 +26,7 @@ data class ObsDataWithRange(
         var bestRtcm: Rtcm? = null
         var bestWeight = Double.NEGATIVE_INFINITY
         for (rtcm in stationRtcmMap.values) {
-            val weight = rtcm.weightOfSat(prn, time) ?: return null
+            val weight = rtcm.weightOfSat(prn, time) ?: continue
             if (weight > bestWeight) {  // w = 1/variance, the higher the better
                 bestRtcm = rtcm
                 bestWeight = weight

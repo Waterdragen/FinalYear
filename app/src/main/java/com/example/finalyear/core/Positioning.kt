@@ -47,7 +47,7 @@ object Positioning {
 
         for (i in 0 until numberOfObs) {
             pseudorangeList[i] = obsDataList[i].pseudorange
-            weightP[i, i] = obsDataList[i].inner.signalToNoiseRatioDb + 1
+            weightP[i, i] = 1 / (obsDataList[i].uncertainty * obsDataList[i].uncertainty)
         }
 
         val gpsPosList = SimpleMatrix(numberOfObs, 3)
@@ -118,8 +118,8 @@ object Positioning {
                 .minus(ionoDelays)  // I
                 .minus(tropoDelays)  // T
 
-            // Least squares adjustment
-            // (B^T * B) ^ -1 * B^T * f
+            // Weighted least squares adjustment
+            // (B^T * P * B) ^ -1 * B^T * P * f
             adjustments = bT.mult(weightP).mult(b).invert().mult(bT).mult(weightP).mult(f)
 
             approxPos.x += adjustments[0]
