@@ -29,14 +29,12 @@ data class HkStation(
             } else {
                 0
             }
-            Log.d("GNSS", "starting point: $startingPoint")
             val filteredHkStationList = arrayListOf<HkStation>()
             for (i in startingPoint until size) {
                 val hkStation = hkStationList[i]
                 // Check 3 km x 3 km
                 val dE = easting - hkStation.easting
                 val dN = northing - hkStation.northing
-                Log.d("GNSS", "dE: $dE dN: $dN easting: $easting northing: $northing")
                 if (abs(dE) < 3000.0 && abs(dN) < 3000.0) {
                     filteredHkStationList.add(hkStation)
                 }

@@ -1,5 +1,6 @@
 package com.example.finalyear.dgps
 
+import android.util.Log
 import com.example.finalyear.util.BitArray
 
 class RtcmType1 {
@@ -20,7 +21,7 @@ class RtcmType1 {
                 i += 16
                 val rrc = bitArray.getSigned(i, 8)
                 i += 8
-                val iod = bitArray.getSigned(i, 8)
+                val iod = bitArray.getUnsigned(i, 8)
                 i += 8
 
                 // In 5-bit representation, prn=32 can only be represented as 0
@@ -40,7 +41,6 @@ class RtcmType1 {
                 val scaleRrc = if (fact != 0) 0.032 else 0.002
 
                 rtcm.dgps[sat - 1] = DgpsCorrection(
-                    t0 = rtcm.time,
                     prc = prc.toDouble() * scalePrc,
                     rrc = rrc.toDouble() * scaleRrc,
                     iod = iod,

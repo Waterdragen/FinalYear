@@ -1,16 +1,17 @@
 package com.example.finalyear.util
 
 import com.example.finalyear.core.NavData
-import com.example.finalyear.core.ObsData
 import com.example.finalyear.core.ObsDataWithRange
 
 data class SurveyData private constructor (
     val baseName: String,
     val navDataList: List<NavData>,
     val obsDataListByEpoch: Map<Long, List<ObsDataWithRange>>,
+    val rawNavDataCount: Int,
 ) {
     companion object {
         fun new(baseName: String, navDataList: List<NavData>, obsDataList: List<ObsDataWithRange>): SurveyData {  // obsDataList is raw pseudoranges
+            val rawNavDataCount = navDataList.size
             val obsDataGrouped = obsDataList.groupBy { it.inner.prn }
 
             val navDataMap = mutableMapOf<Int, NavData>()
@@ -42,7 +43,7 @@ data class SurveyData private constructor (
                     avgSnrDb += obsData.inner.signalToNoiseRatioDb
                 }
                 avgSnrDb /= lst.size
-                if (avgSnrDb < 15) {
+                if (avgSnrDb < 5) {
                     obsDataListIter.remove()
                 }
             }
@@ -51,6 +52,7 @@ data class SurveyData private constructor (
                 baseName = baseName,
                 navDataList = filteredNavDataList,
                 obsDataListByEpoch = obsDataListByEpoch,
+                rawNavDataCount = rawNavDataCount,
             )
         }
     }

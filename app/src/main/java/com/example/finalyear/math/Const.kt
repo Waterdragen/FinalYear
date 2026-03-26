@@ -11,7 +11,9 @@ object Const {
     const val OmegaE = 7.2921151467e-5  // Earth rotation rate (rad/s)
     const val RelativisticF = -4.442807633e-10
 
-    const val HALF_WEEK = 302400.0
+    const val HALF_WEEK_SEC = 302400.0
+    const val WEEK_SEC = 604800.0
+    const val WEEK_NS = 604800_000_000_000L
     const val HALF_WEEK_NS = 302400_000_000_000L
 
     const val L1_FREQ_HZ = 1.57542e9

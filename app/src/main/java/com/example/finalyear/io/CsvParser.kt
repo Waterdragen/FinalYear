@@ -194,8 +194,8 @@ fun parseCsvLineRobust(line: String): List<String> {
     while (i < line.length) {
         val c = chars[i]
 
-        when {
-            c == '"' -> {
+        when (c) {
+            '"' -> {
                 if (inQuotes) {
                     // Check if next character is also quote (escaped quote)
                     if (i + 1 < line.length && chars[i + 1] == '"') {
@@ -210,8 +210,7 @@ fun parseCsvLineRobust(line: String): List<String> {
                     inQuotes = true
                 }
             }
-
-            c == ',' -> {
+            ',' -> {
                 if (inQuotes) {
                     // Comma inside quotes -> part of the field
                     builder.append(c)
@@ -221,7 +220,6 @@ fun parseCsvLineRobust(line: String): List<String> {
                     builder.clear()
                 }
             }
-
             else -> {
                 builder.append(c)
             }

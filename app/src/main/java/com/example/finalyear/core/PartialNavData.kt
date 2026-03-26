@@ -1,12 +1,20 @@
 package com.example.finalyear.core
 
-import com.example.finalyear.util.Parser
-
 data class PartialNavData (
     val prn: Int,
     var inner: NavData = NavData(prn),
     var subframesDecoded: Int = 0,
 ) {
+    companion object {
+        fun fromFullyDecoded(navData: NavData): PartialNavData {
+            return PartialNavData(
+                prn = navData.prn,
+                inner = navData,
+                subframesDecoded = 0b111,
+            )
+        }
+    }
+
     fun subframeBit(subframeId: Int): Int {
         return 1 shl (subframeId - 1)
     }
@@ -57,13 +65,6 @@ data class PartialNavData (
         }
         return Status.Continue
     }
-    fun tryIode(): Int? {
-        if (isComplete()) return inner.iode
-        if (hasDecodedSubframe(1)) return inner.iodc and Parser.GpsEphemerisDecoder.IODE_TO_IODC_MASK
-        if (hasDecodedSubframe(2) || hasDecodedSubframe(3)) return inner.iode
-        return null
-    }
-
     enum class Status {
         Continue, Reset, Done;
 

@@ -10,6 +10,7 @@ class RtcmDecoder {
     companion object {
         fun decodeRtcm(rawMsg: ByteArray): Rtcm? {
             val rtcm = Rtcm()
+            rtcm.resizeBuffers()
 
             var word = 0u
             var nbyte = 0

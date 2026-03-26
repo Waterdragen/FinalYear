@@ -15,23 +15,24 @@ import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.view.LayoutInflater
-import androidx.fragment.app.Fragment
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import com.example.finalyear.core.HKNtripClient
 import com.example.finalyear.core.NavData
 import com.example.finalyear.core.ObsData
-import com.example.finalyear.dgps.CustomRtcmParser
 import com.example.finalyear.dgps.Rtcm
+import com.example.finalyear.io.serialize
 import com.example.finalyear.io.LogText
 import com.example.finalyear.util.Parser
 import java.io.File
-import java.text.DecimalFormat
 import java.time.LocalDateTime
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 class PageSurvey : Fragment() {
     companion object {
@@ -62,11 +63,17 @@ class PageSurvey : Fragment() {
 
     lateinit var handler: Handler
     lateinit var logNav: TextView
-    lateinit var logObs: TextView
+    lateinit var logDgnss: TextView
     lateinit var btnToggleSurvey: Button
-    var decoder = Parser.GpsEphemerisDecoder()
-    var logNavText = StringBuilder()
-    var logObsText = StringBuilder(100000)
+
+    lateinit var textNavCount: TextView
+    lateinit var textObsCount: TextView
+    lateinit var textDgnssCount: TextView
+
+    val decoder = Parser.GpsEphemerisDecoder()
+    val logNavText = StringBuilder()
+    val logDgnssText = StringBuffer()
+    val numDgnss = AtomicInteger(0)
     var isSurveying = false
     var stationRtcmMap = mapOf<Int, Rtcm>()
 
@@ -83,9 +90,13 @@ class PageSurvey : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         logNav = view.findViewById(R.id.debugNavText)
-        logObs = view.findViewById(R.id.debugObsText)
+        logDgnss = view.findViewById(R.id.debugObsText)
         btnToggleSurvey = view.findViewById(R.id.btnToggleSurvey)
         btnToggleSurvey.setOnClickListener { onBtnToggleSurveyClicked() }
+
+        textNavCount = view.findViewById(R.id.textNavCount)
+        textObsCount = view.findViewById(R.id.textObsCount)
+        textDgnssCount = view.findViewById(R.id.textDgnssCount)
     }
 
     override fun onStart() {
@@ -182,7 +193,32 @@ class PageSurvey : Fragment() {
                 btnToggleSurvey.text = "Stop surveying"
 
                 ntripClient.startConnection()
-                ntripClient.logText = logObsText
+                ntripClient.logText = logDgnssText
+                ntripClient.numDgnss = numDgnss
+
+                Thread {
+                    try {
+                        val suplNavDataList = NavData.fetchEphemerisFromSupl()
+
+                        handler.post {
+                            Log.d("SUPL", "SUPL fetch complete – ${suplNavDataList.size} NavData items")
+                            // Example: show first few PRNs in the nav log
+                            suplNavDataList.forEach { nav ->
+                                logNavText.append("SUPL → PRN: ${nav.prn}  iode=${nav.iode}\n")
+                            }
+                            logNav.text = logNavText
+
+                            decoder.pushEphemerides(suplNavDataList)
+                            textNavCount.text = "Satellite count: ${decoder.fullyDecodedNavDataCount()}"
+                        }
+                    } catch (e: Exception) {
+                        Log.e("SUPL", "SUPL fetch failed", e)
+                        handler.post {
+                            logNavText.append("SUPL error: ${e.message}\n")
+                            logNav.text = logNavText
+                        }
+                    }
+                }.start()
 
             } catch (e: SecurityException) {
                 Log.e("GNSS", "Permission Denied")
@@ -208,7 +244,7 @@ class PageSurvey : Fragment() {
                 Log.e("GNSS", "Permission Denied")
                 return
             } catch (e: Exception) {
-                Log.e("GNSS", "Unknown error, most likely caused by unregistering without registering")
+                Log.e("GNSS", e.stackTraceToString())
                 return
             }
         }
@@ -227,31 +263,39 @@ class PageSurvey : Fragment() {
         logNavText.append("PRN: $prn, NavData(prn=$prn, time=${navData.dateTime}, iode=$iode, satCount=$currentCount)\n")
         logNav.text = logNavText
 
-        logObs.text = logObsText
+        logDgnss.text = logDgnssText
+
+        textNavCount.text = "Satellite count: ${decoder.fullyDecodedNavDataCount()}"
     }
 
-    private fun pushObsMessage(prn: Int, obsData: ObsData) {
-//        val obsDateTime = GpsTime.fromNanos(obsData.gpsTimeNs).toDateTime()
-//        logObsText.append("PRN: $prn, dateTime: $obsDateTime\n")
-//        logObs.text = logObsText
+    private fun pushObsMessage() {
+        var numOfObs = 0
+        for (obsDataQueue in decoder.obsDataList) {
+            numOfObs += obsDataQueue.size()
+        }
+        textObsCount.text = "Observations count: $numOfObs"
+
+        // Also update the DGNSS count
+        textDgnssCount.text = "Dgnss for satellites: ${numDgnss.get()}"
     }
 
     private fun clearMessage() {
         logNavText.clear()
         logNav.text = logNavText
-        logObsText.clear()
-        logObs.text = logObsText
+        logDgnssText.setLength(0)
+        logDgnss.text = logDgnssText
+
+        textNavCount.text = "Satellite count: 0"
+        textObsCount.text = "Observations count: 0"
+        textDgnssCount.text = "Dgnss for satellites: 0"
+        numDgnss.set(0)
     }
 
     private fun processGnssMeasurements(event: GnssMeasurementsEvent?) {
         event ?: return
 
         decoder.pushMeasurements(event)
-        for (obsDataQueue in decoder.obsDataList) {
-            for (obsData in obsDataQueue) {
-                pushObsMessage(obsData.prn, obsData)
-            }
-        }
+        pushObsMessage()
     }
 
     private fun processGnssNavMsg(msg: GnssNavigationMessage?) {
@@ -294,17 +338,9 @@ class PageSurvey : Fragment() {
         decoder.setIonoCorrections()
 
         val dt = LocalDateTime.now()
-        val df = DecimalFormat("00")
-        val year = dt.year
-        val month = df.format(dt.month.value.toLong())
-        val day = df.format(dt.dayOfMonth.toLong())
-        val hour = df.format(dt.hour.toLong())
-        val minute = df.format(dt.minute.toLong())
-        val second = df.format(dt.second.toLong())
-
         val filesDir = requireContext().filesDir
-
-        val fileNameBase = "$year-$month-$day-$hour$minute$second"
+        val fileNameBase = "%d-%02d-%02d-%02d%02d%02d".format(dt.year, dt.monthValue, dt.dayOfMonth, dt.hour, dt.minute, dt.second)
+        Log.d("GNSS", fileNameBase)
         val navFileName = "$fileNameBase-nav.csv"
         val navFile = File(filesDir, navFileName)
         NavData.writeCsvHeader(navFile)
@@ -327,8 +363,8 @@ class PageSurvey : Fragment() {
         decoder.clearData()
 
         // Write DGNSS to text file
-        val dgnssText = CustomRtcmParser.serializeStationRtcmMap(stationRtcmMap)
-        LogText().save(dgnssText.encodeToByteArray(), "$fileNameBase-dgnss.txt")
+        val dgnssText = stationRtcmMap.serialize()
+        LogText().saveText(dgnssText, "$fileNameBase-dgnss.json")
     }
 
     private fun showSurveyFinishDialog() {

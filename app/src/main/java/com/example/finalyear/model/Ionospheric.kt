@@ -20,7 +20,7 @@ data class Ionospheric (
             val numOfObs = obsDataList.size
             val ionoDelayList = SimpleMatrix(numOfObs, 1)
             for (i in 0 until numOfObs) {
-                ionoDelayList[i] = navDataList[i].iono.klobucharDelaySec(
+                ionoDelayList[i] = navDataList[i].iono.klobucharDelayMeters(
                     userPosEcef = userPos,
                     satPosEcef = Xyz.fromMatrixRow(satPosList, row = i),
                     rxTowSec = obsDataList[i].inner.rxTimeNs * 1e-9,
@@ -55,7 +55,7 @@ data class Ionospheric (
         beta = doubleArrayOf(0.0, 0.0, 0.0, 0.0)
     }
 
-    fun klobucharDelaySec(
+    fun klobucharDelayMeters(
         userPosEcef: Xyz,
         satPosEcef: Xyz,
         rxTowSec: Double,
@@ -137,6 +137,6 @@ data class Ionospheric (
         // apply factor for frequency bands other than L1
         ionoDelaySec *= (Const.L1_FREQ_HZ * Const.L1_FREQ_HZ) / (frequencyHz * frequencyHz)
 
-        return ionoDelaySec
+        return ionoDelaySec * Const.c
     }
 }

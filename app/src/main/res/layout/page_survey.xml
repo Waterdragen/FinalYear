@@ -33,6 +33,34 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
+            android:layout_weight="2"
+            android:orientation="vertical"
+            android:background="@drawable/border_debug_text">
+
+            <TextView
+                android:id="@+id/textNavCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Satellite count: 0"
+                android:textSize="24sp"/>
+            <TextView
+                android:id="@+id/textObsCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Observations count: 0"
+                android:textSize="24sp"/>
+            <TextView
+                android:id="@+id/textDgnssCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Dgnss for satellites: 0"
+                android:textSize="24sp"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
             android:layout_weight="4"
             android:orientation="vertical"
             android:background="@drawable/border_debug_text">
@@ -60,7 +88,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="6"
+            android:layout_weight="4"
             android:orientation="vertical"
             android:background="@drawable/border_debug_text"
             android:layout_marginTop="-1dp">

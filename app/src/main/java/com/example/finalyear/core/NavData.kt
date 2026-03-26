@@ -1,9 +1,14 @@
 package com.example.finalyear.core
 
+import android.location.cts.nano.Ephemeris
+import android.location.cts.nano.Ephemeris.GpsEphemerisProto
+import android.location.cts.suplClient.SuplRrlpController
+import android.util.Log
 import com.example.finalyear.math.Const
 import com.example.finalyear.math.MathFn
 import com.example.finalyear.model.Ionospheric
 import com.example.finalyear.coord.Xyz
+import com.example.finalyear.math.GpsTime
 import org.joda.time.DateTime
 import java.io.File
 import kotlin.math.*
@@ -100,6 +105,60 @@ data class NavData(
             sb.append('\n')
             file.writeText(sb.toString())
         }
+
+        fun fromGpsEphemerisProto(ephem: GpsEphemerisProto): NavData {
+            return NavData(
+                prn = ephem.prn,
+                dateTime = GpsTime.fromWeekAndTowSec(ephem.week.toDouble(), ephem.toe).toDatetime(),
+                svClockBias = ephem.af0,
+                svClockDrift = ephem.af1,
+                svClockDriftRate = ephem.af2,
+                iode = ephem.iode,
+                crs = ephem.crs,
+                deltaN = ephem.deltaN,
+                m0 = ephem.m0,
+                cuc = ephem.cuc,
+                ecc = ephem.e,
+                cus = ephem.cus,
+                sqrtA = ephem.rootOfA,
+                t0 = ephem.toe,
+                cic = ephem.cic,
+                omega0 = ephem.omega0,
+                cis = ephem.cis,
+                i0 = ephem.i0,
+                crc = ephem.crc,
+                omega = ephem.omega,
+                dOmega = ephem.omegaDot,
+                dI = ephem.iDot,
+                codeL2 = ephem.l2Code.toDouble(),
+                weekNo = ephem.week.toDouble(),
+                l2PDataFlag = ephem.l2Flag.toDouble(),
+                svAccuracy = ephem.svAccuracyM,
+                svHealth = ephem.svHealth.toDouble(),
+                tgd = ephem.tgd,
+                iodc = ephem.iodc,
+                transmissionTimeOfMsg = ephem.toe,
+                fitInterval = ephem.fitInterval,
+                iono = Ionospheric()
+            )
+        }
+
+        fun fetchEphemerisFromSupl(): List<NavData> {
+            val controller = SuplRrlpController("supl.google.com", 7276)
+
+            val navProto: Ephemeris.GpsNavMessageProto = controller.generateNavMessage(22L * 10_000_000L, 114L * 10_000_000L)
+
+            Log.d("GNSS", "Fetched ${navProto.ephemerids.size} GPS ephemerides from supl.google.com:7276")
+            val iono = Ionospheric(navProto.iono.alpha, navProto.iono.beta)
+
+            return navProto.ephemerids
+                .filterNotNull()
+                .map {
+                    val navData = fromGpsEphemerisProto(it)
+                    navData.iono = iono  // fill ionospheric data
+                    navData
+                }
+        }
     }
 
     fun writeCsvRow(file: File) {
@@ -146,6 +205,10 @@ data class NavData(
         sb.append('\n')
 
         file.appendText(sb.toString())
+    }
+
+    fun gpsTimeSecs(): Double {
+        return weekNo * Const.WEEK_SEC + t0
     }
 
     fun meanMotion(): Double {

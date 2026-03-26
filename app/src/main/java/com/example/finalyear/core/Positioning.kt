@@ -16,8 +16,7 @@ object Positioning {
         var bestTimeDiff = Double.POSITIVE_INFINITY
         for (navData in navDataList) {
             if (navData.prn == obsData.inner.prn) {
-                val timeDiff = abs(obsData.inner.gpsTimeNs * 1e-9
-                                   - MathFn.datetimeToGpsTime(navData.dateTime))
+                val timeDiff = abs(obsData.inner.gpsTimeNs * 1e-9 - navData.gpsTimeSecs())
                 if (timeDiff < bestTimeDiff) {
                     bestTimeDiff = timeDiff
                     bestNav = navData
@@ -27,12 +26,14 @@ object Positioning {
         return bestNav
     }
 
-    fun sppSingleEpoch(refNavDataList: List<NavData>,
-                       refObsDataList: List<ObsDataWithRange>): Xyz {
+    fun lsSingleEpoch(refNavDataList: List<NavData>,
+                      refObsDataList: List<ObsDataWithRange>,
+                      mode: Mode): Xyz {
         val navDataList = arrayListOf<NavData>()
         val obsDataList = arrayListOf<ObsDataWithRange>()
         for (obsData in refObsDataList) {
             val match = findMatchingNavData(refNavDataList, obsData) ?: continue
+
             navDataList.add(match)
             obsDataList.add(obsData)
         }
@@ -94,29 +95,41 @@ object Positioning {
             val b = MathFn.designMatrix(approxPos, gpsPosList, rho)
             val bT = b.transpose()
 
-            // Ionospheric delay
-            val ionoDelays = Ionospheric.delays(
-                navDataList = navDataList,
-                obsDataList = obsDataList,
-                userPos = approxPos,
-                satPosList = gpsPosList,
-                frequencyHz = Const.L1_FREQ_HZ,
-            )
-
-            // Tropospheric delay
-            val tropoDelays = Tropospheric.delays(
-                userPos = approxPos,
-                satPosList = gpsPosList,
-            )
-
             // Error function
-            // dP = P - (rho + c(dT_usr - dt_sat) + I + T + ...)
-            //    = P - rho + c * dt_sat - c * dT_usr - I - T - ...
-            val f = (pseudorangeList.minus(rho)
-                .plus(satClockErrList)  // c * dt
-                .minus(rxClockBiasM))  // c * dT
-                .minus(ionoDelays)  // I
-                .minus(tropoDelays)  // T
+            // Normal SPP:
+            // P = rho + c(dT_usr - dt_sat) + I + T + ...
+            // Residual = P - (rho + c(dT_usr - dt_sat) + I + T + ...)
+            //          = P - rho + c·dt_sat - c·dT_usr - I - T - ...
+
+            // DGNSS Type 1 RTCM:
+            // PRC = P_base - rho_base
+            //     ≈ c·dT_base + I_base + T_base + ...
+            // Residual = (P_usr + PRC) - rho + c·dt_sat - c·dt_usr
+            var f = (pseudorangeList.minus(rho)
+                .plus(satClockErrList)  // c·dt
+                .minus(rxClockBiasM))  // c·dT
+
+            when (mode) {
+                Mode.Spp -> {
+                    // Ionospheric delay
+                    val ionoDelays = Ionospheric.delays(
+                        navDataList = navDataList,
+                        obsDataList = obsDataList,
+                        userPos = approxPos,
+                        satPosList = gpsPosList,
+                        frequencyHz = Const.L1_FREQ_HZ,
+                    )
+
+                    // Tropospheric delay
+                    val tropoDelays = Tropospheric.delays(
+                        userPos = approxPos,
+                        satPosList = gpsPosList,
+                    )
+                    f = f.minus(ionoDelays)  // I
+                         .minus(tropoDelays)  // T
+                    }
+                Mode.Dgnss -> {}  // PRC contains dI, dT
+            }
 
             // Weighted least squares adjustment
             // (B^T * P * B) ^ -1 * B^T * P * f
@@ -136,5 +149,19 @@ object Positioning {
         }
 
         return approxPos
+    }
+
+    enum class Mode {
+        Spp,
+        Dgnss;
+
+        fun lsSingleEpoch(refNavDataList: List<NavData>,
+                          refObsDataList: List<ObsDataWithRange>): Xyz {
+            return Positioning.lsSingleEpoch(
+                refNavDataList = refNavDataList,
+                refObsDataList = refObsDataList,
+                mode = this,
+            )
+        }
     }
 }

@@ -2,6 +2,7 @@ package com.example.finalyear.core
 
 import android.util.Log
 import com.example.finalyear.dgps.Rtcm
+import com.example.finalyear.math.GpsTime
 
 data class ObsDataWithRange(
     val inner: ObsData,
@@ -36,10 +37,9 @@ data class ObsDataWithRange(
         // Skip if no PRN or not type 1
         val rtcm = bestRtcm ?: return null
         val dgps = rtcm.dgps[prn - 1] ?: return null
-        val age = time - dgps.t0.asGpsTimeSecs()  // Time of base station
+        val age = obsData.inner.gpsTimeNs * 1e-9 - rtcm.t0.secs
 
-        val correctedPseudorange = obsData.pseudorange - (dgps.prc + dgps.rrc * age)
-        Log.d("GNSS", "PRC: ${dgps.prc}")
+        val correctedPseudorange = obsData.pseudorange + dgps.prc + dgps.rrc * age
         obsData.pseudorange = correctedPseudorange
 
         return obsData

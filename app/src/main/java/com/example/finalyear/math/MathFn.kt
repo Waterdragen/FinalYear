@@ -16,13 +16,13 @@ object MathFn {
         return towNs
     }
     fun fixWeekRollover(towSec: Double): Double {
-        require(towSec < 1e9)  // Avoid accidental ns
+        require(towSec < 1e9) { "passed argument to towSec: $towSec"}  // Avoid accidental ns
 
-        if (towSec > Const.HALF_WEEK) {
-            return towSec - 2 * Const.HALF_WEEK
+        if (towSec > Const.HALF_WEEK_SEC) {
+            return towSec - 2 * Const.HALF_WEEK_SEC
         }
-        if (towSec < -Const.HALF_WEEK) {
-            return towSec + 2 * Const.HALF_WEEK
+        if (towSec < -Const.HALF_WEEK_SEC) {
+            return towSec + 2 * Const.HALF_WEEK_SEC
         }
         return towSec
     }

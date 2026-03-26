@@ -16,10 +16,11 @@ import com.example.finalyear.core.MyException
 import com.example.finalyear.core.NavData
 import com.example.finalyear.core.ObsData
 import com.example.finalyear.core.Positioning
-import com.example.finalyear.dgps.CustomRtcmParser
 import com.example.finalyear.dgps.Rtcm
 import com.example.finalyear.io.CsvParser
 import com.example.finalyear.coord.Hk1980
+import com.example.finalyear.core.Positioning.lsSingleEpoch
+import com.example.finalyear.io.deserializeToRtcmMap
 import com.example.finalyear.util.SurveyData
 import java.io.File
 import kotlin.math.*
@@ -163,7 +164,7 @@ class PageSurveyStore : Fragment() {
         navDataList = navCsvParser.tryParseNavDataList()
         obsDataList = obsCsvParser.tryParseObsDataList()
 
-        val dgnssFileName = "$baseName-dgnss.txt"
+        val dgnssFileName = "$baseName-dgnss.json"
         val dgnssFile = File(context.filesDir, dgnssFileName)
         if (!dgnssFile.exists()) {
             showDialog("Error", "DGNSS file does not exist")
@@ -172,9 +173,9 @@ class PageSurveyStore : Fragment() {
         }
         stationRtcmMapOptional = try {
             val dgnssText = dgnssFile.readText(Charsets.UTF_8)
-            CustomRtcmParser.deserializeStationRtcmMap(dgnssText) ?: throw Exception("Failed to parse DGNSS file")
+            dgnssText.deserializeToRtcmMap()
         } catch (e: Exception) {
-            showDialog("Error", "Error parsing custom DGNSS file")
+            showDialog("Error", "Failed to parse DGNSS file")
             Log.e("GNSS", e.stackTraceToString())
             return
         }
@@ -197,7 +198,7 @@ class PageSurveyStore : Fragment() {
         showDialog("Success", "Stored `$baseName` to survey data list")
 
         textLoadedFile.text = "Loaded file: ${navFile.name}"
-        textNumNavSat.text = "Navigation satellite count: ${newSurveyData.navDataList.size}"
+        textNumNavSat.text = "Navigation satellite count: ${newSurveyData.rawNavDataCount}"
         textNumObs.text = "Number of observations: ${obsDataListSpp.size}"  // Number of raw measurements
         clearContext()
     }
@@ -237,47 +238,57 @@ class PageSurveyStore : Fragment() {
         val sppNavList = surveyDataSpp.navDataList
         val dgnssNavList = surveyDataDgnss.navDataList
 
-        for (epoch in surveyDataSpp.obsDataListByEpoch.keys) {
-            val sppObsList = surveyDataSpp.obsDataListByEpoch[epoch]!!  // Accessing key-value with its keys
-            val dgnssObsList = surveyDataDgnss.obsDataListByEpoch[epoch]!!  // SPP and DGNSS obsDataListByEpoch should have the same keys
+        // Check initial satellite count
+        if (surveyDataSpp.rawNavDataCount < 4) {
+            showDialog("Not Enough satellites",
+                MyException.NotEnoughSatellites.fromCount(surveyDataSpp.navDataList.size).message ?: ""
+            )
+            return
+        }
 
+        for (sppObsList in surveyDataSpp.obsDataListByEpoch.values) {
             try {
-                val sppPos = Positioning.sppSingleEpoch(sppNavList, sppObsList)
-                val dgnssPos = Positioning.sppSingleEpoch(dgnssNavList, dgnssObsList)
-
+                val sppPos = Positioning.Mode.Spp.lsSingleEpoch(sppNavList, sppObsList)
                 sppPosList.add(Hk1980.Grid.fromWgs84Xyz(sppPos))
-                dgnssPosList.add(Hk1980.Grid.fromWgs84Xyz(dgnssPos))
             } catch (e: MyException.NotEnoughSatellites) {
-                showDialog("Not Enough satellites", e.toString())
-                return
+                continue
             } catch (e: MyException.LsConvergeFail) {
                 continue
             }
         }
 
-        val sppAvgPos = arrayOf(0.0, 0.0, 0.0)
-        val dgnssAvgPos = arrayOf(0.0, 0.0, 0.0)
-        for (sppPos in sppPosList) {
-            sppAvgPos[0] += sppPos.e
-            sppAvgPos[1] += sppPos.n
-            sppAvgPos[2] += sppPos.h
-        }
-        for (dgnssPos in dgnssPosList) {
-            dgnssAvgPos[0] += dgnssPos.e
-            dgnssAvgPos[1] += dgnssPos.n
-            dgnssAvgPos[2] += dgnssPos.h
-        }
-        for (i in 0 until 3) {
-            sppAvgPos[i] /= sppPosList.size.toDouble()
-            dgnssAvgPos[i] /= dgnssPosList.size.toDouble()
+        for (dgnssObsList in surveyDataDgnss.obsDataListByEpoch.values) {
+            try {
+                val dgnssPos = Positioning.Mode.Dgnss.lsSingleEpoch(dgnssNavList, dgnssObsList)
+                dgnssPosList.add(Hk1980.Grid.fromWgs84Xyz(dgnssPos))
+            } catch (e: MyException.NotEnoughSatellites) {
+                continue
+            } catch (e: MyException.LsConvergeFail) {
+                continue
+            }
         }
 
-        val sppEnh = Hk1980.Grid(sppAvgPos[0], sppAvgPos[1], sppAvgPos[2])
-        val dgnssEnh = Hk1980.Grid(dgnssAvgPos[0], dgnssAvgPos[1], dgnssAvgPos[2])
-        calculatedSppEnh = sppEnh
-        calculatedDgnssEnh = dgnssEnh
+        if (sppPosList.isEmpty()) {
+            showDialog("No valid epochs",
+                "SPP zero epochs after filtering (there are enough satellites but not enough observations).")
+            return
+        }
+
+        val sppAvgPos = Hk1980.Grid(0.0, 0.0, 0.0)
+        val dgnssAvgPos = Hk1980.Grid(0.0, 0.0, 0.0)
+        for (sppPos in sppPosList) {
+            sppAvgPos.addAssign(sppPos)
+        }
+        sppAvgPos.divNum(sppPosList.size.toDouble())
+        for (dgnssPos in dgnssPosList) {
+            dgnssAvgPos.addAssign(dgnssPos)
+        }
+        dgnssAvgPos.divNum(dgnssPosList.size.toDouble())
+
+        calculatedSppEnh = sppAvgPos
+        calculatedDgnssEnh = dgnssAvgPos
         computeErrorWithClosestHkStation()
-        handleSuccessfullyResolvedLocation(sppEnh, dgnssEnh)
+        handleSuccessfullyResolvedLocation(sppAvgPos, dgnssAvgPos)
     }
 
     private fun handleSuccessfullyResolvedLocation(sppEnh: Hk1980.Grid, dgnssEnh: Hk1980.Grid) {

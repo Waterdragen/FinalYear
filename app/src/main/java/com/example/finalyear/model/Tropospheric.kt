@@ -48,13 +48,13 @@ object Tropospheric {
         val troposphericDelayList = SimpleMatrix(numRows, 1)
         for (i in 0 until numRows) {
             val satPos = Xyz.fromMatrixRow(satPosList, row = i)
-            val tropoDelay = saastamoinenDelaySec(userPos, satPos)
+            val tropoDelay = saastamoinenDelayMeters(userPos, satPos)
             troposphericDelayList[i] = tropoDelay
         }
         return troposphericDelayList
     }
 
-    fun saastamoinenDelaySec(
+    fun saastamoinenDelayMeters(
         userPos: Xyz,
         satPos: Xyz,
     ): Double {
@@ -80,7 +80,9 @@ object Tropospheric {
         val zwd = assumedMetStats.saasZwdMeters()
 
         // Slant delay
-        return mDry * zhd + mWet * zwd
+        val slantDelayMeters = mDry * zhd + mWet * zwd
+
+        return slantDelayMeters
     }
 
     fun computeDryAndWetMappingValuesUsingUNBabcMappingFunction(

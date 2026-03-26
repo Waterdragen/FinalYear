@@ -6,11 +6,12 @@ import android.location.GnssMeasurement
 import android.location.GnssMeasurementsEvent
 import android.location.GnssStatus
 import android.util.Log
-import com.example.finalyear.GpsTime
 import com.example.finalyear.PageSurvey
+import com.example.finalyear.core.NavData
 import com.example.finalyear.model.Ionospheric
 import com.example.finalyear.core.ObsData
 import com.example.finalyear.core.PartialNavData
+import com.example.finalyear.math.GpsTime
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
 import java.util.concurrent.TimeUnit
@@ -119,7 +120,7 @@ class Parser {
         val partialNavDataList: MutableList<PartialNavData> = (1..32).map { index -> PartialNavData(index) }.toMutableList()
 
         val obsDataList = Array<OverwritingQueue<ObsData>>(32)
-        { _ -> OverwritingQueue(600) }
+        { _ -> OverwritingQueue(300) }
 
         val ionoCorrections: Ionospheric = Ionospheric()
 
@@ -147,6 +148,13 @@ class Parser {
             }
         }
 
+        fun pushEphemerides(navDataList: List<NavData>) {
+            for (navData in navDataList) {
+                val index = navData.prn - 1
+                partialNavDataList[index] = PartialNavData.fromFullyDecoded(navData)
+            }
+        }
+
         fun pushMeasurements(event: GnssMeasurementsEvent?) {
             event ?: return
 
@@ -156,8 +164,7 @@ class Parser {
             val biasNs = if (clock.hasBiasNanos()) { clock.biasNanos.toLong() } else { 0L }
 
             val rxTimeNsSinceEpoch = clock.timeNanos - fullBiasNs - biasNs  // Note that this is since GPS Epoch
-            val rxTimeStartOfWeekTime = GpsTime.fromNanos(rxTimeNsSinceEpoch).gpsWeekEpochNano()
-            val rxTimeNs = rxTimeNsSinceEpoch - rxTimeStartOfWeekTime
+            val rxTimeNs = GpsTime(rxTimeNsSinceEpoch).towNs
 
             for (measurement in event.measurements) {
                 // We only handle GPS satellites for now
@@ -211,8 +218,6 @@ class Parser {
             val partialNavData = findPartialNavData(prn, 1, iodc) ?: return null
             val navData = partialNavData.inner
 
-            // TODO: check if intermediateEphemeris is up to date
-
             navData.iodc = iodc
 
             val week = byteData.get(WEEK_POS)
@@ -253,8 +258,6 @@ class Parser {
             val partialNavData = findPartialNavData(prn, 2, iode) ?: return null
             val navData = partialNavData.inner
 
-            // TODO: check if intermediate ephemeris is new
-
             navData.iode = iode
 
             val crs = byteData.get(CRS_POS).toShort()
@@ -292,8 +295,6 @@ class Parser {
 
             val partialNavData = findPartialNavData(prn, 3, iode) ?: return null
             val navData = partialNavData.inner
-
-            // TODO: Check if intermediate ephemeric requires updating
 
             navData.iode = iode
 
@@ -360,8 +361,6 @@ class Parser {
 
             ionoCorrections.alpha = alpha
             ionoCorrections.beta = beta
-
-            // TODO: Implement a0UTC, a1UTC, tot, wnt, tls, wnlsf, dn, tlsf
         }
 
         private fun onParsingDone(partialNavData: PartialNavData, subframeId: Int) {

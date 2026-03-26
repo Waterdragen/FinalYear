@@ -3,23 +3,25 @@ package com.example.finalyear.core
 import android.util.Log
 import com.example.finalyear.dgps.Rtcm
 import com.example.finalyear.dgps.RtcmDecoder
-import com.example.finalyear.util.GTime
+import com.example.finalyear.math.GpsTime
 import java.io.BufferedInputStream
 import java.io.OutputStream
 import java.net.Socket
 import java.util.Base64
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 class HKNtripClient {
     companion object {
         const val HOST = "www.geodetic.gov.hk"
         const val PORT = 2101
         const val MOUNT_POINT = "DGPS"
-        const val REQUIRES_NMEA = false
         const val USERNAME = "YipChikHim"
         const val PASSWORD = "vV3F31"
     }
 
-    var logText: StringBuilder? = null
+    var logText: StringBuffer? = null
+    var numDgnss: AtomicInteger? = null
 
     private var socket: Socket? = null
     private var inputStream: BufferedInputStream? = null
@@ -76,7 +78,7 @@ class HKNtripClient {
             while (isRunning) {
                 bytesRead = inputStream?.read(buffer) ?: break
                 // Immediately record the receiver time
-                val recvTime = GTime.fromUnixNow()
+                val recvTime = GpsTime.fromUnixNow()
 
                 // Append to messageBuffer and parse RTCM messages
                 val message = buffer.copyOf(bytesRead)
@@ -87,7 +89,7 @@ class HKNtripClient {
                 Log.d("GNSS", "Received DGNSS message type ${rtcm.msgType} from station $stationId!")
                 rtcm.recvTime = recvTime
                 pushDgnssMessage(rtcm)
-                stationRtcmMap[stationId] = rtcm
+                stationRtcmMap[stationId] = rtcm  // Only stores the latest DGNSS (storage and complexity concerns, older measurements cannot be effectively adjusted)
             }
 
         } catch (e: Exception) {
@@ -126,5 +128,10 @@ class HKNtripClient {
 
     private fun pushDgnssMessage(rtcm: Rtcm) {
         logText?.append("DGNSS Type ${rtcm.msgType} station id: ${rtcm.stationId}\n")
+        var num = 0
+        for (_rtcm in stationRtcmMap.values) {
+            num += _rtcm.numDgnss()
+        }
+        numDgnss?.set(num)
     }
 }
