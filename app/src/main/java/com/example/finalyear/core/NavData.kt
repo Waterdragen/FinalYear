@@ -148,14 +148,13 @@ data class NavData(
 
             val navProto: Ephemeris.GpsNavMessageProto = controller.generateNavMessage(22L * 10_000_000L, 114L * 10_000_000L)
 
-            Log.d("GNSS", "Fetched ${navProto.ephemerids.size} GPS ephemerides from supl.google.com:7276")
             val iono = Ionospheric(navProto.iono.alpha, navProto.iono.beta)
 
             return navProto.ephemerids
                 .filterNotNull()
                 .map {
                     val navData = fromGpsEphemerisProto(it)
-                    navData.iono = iono  // fill ionospheric data
+                    navData.iono = iono.clone()  // fill ionospheric data
                     navData
                 }
         }
@@ -196,6 +195,8 @@ data class NavData(
         sb.append(fitInterval.toString()); sb.append(',')
         sb.append(spare1.toString()); sb.append(',')
         sb.append(spare2.toString()); sb.append(',')
+        Log.d("GNSS", iono.alpha.contentToString())
+        Log.d("GNSS", iono.beta.contentToString())
         for (i in 0 until 4) {
             sb.append(iono.alpha[i].toString()); sb.append(',')
         }

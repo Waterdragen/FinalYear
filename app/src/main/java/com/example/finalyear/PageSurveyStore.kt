@@ -19,7 +19,6 @@ import com.example.finalyear.core.Positioning
 import com.example.finalyear.dgps.Rtcm
 import com.example.finalyear.io.CsvParser
 import com.example.finalyear.coord.Hk1980
-import com.example.finalyear.core.Positioning.lsSingleEpoch
 import com.example.finalyear.io.deserializeToRtcmMap
 import com.example.finalyear.util.SurveyData
 import java.io.File
@@ -274,16 +273,8 @@ class PageSurveyStore : Fragment() {
             return
         }
 
-        val sppAvgPos = Hk1980.Grid(0.0, 0.0, 0.0)
-        val dgnssAvgPos = Hk1980.Grid(0.0, 0.0, 0.0)
-        for (sppPos in sppPosList) {
-            sppAvgPos.addAssign(sppPos)
-        }
-        sppAvgPos.divNum(sppPosList.size.toDouble())
-        for (dgnssPos in dgnssPosList) {
-            dgnssAvgPos.addAssign(dgnssPos)
-        }
-        dgnssAvgPos.divNum(dgnssPosList.size.toDouble())
+        val sppAvgPos = Positioning.twoSigmaRejectionAvg(sppPosList)
+        val dgnssAvgPos = Positioning.twoSigmaRejectionAvg(dgnssPosList)
 
         calculatedSppEnh = sppAvgPos
         calculatedDgnssEnh = dgnssAvgPos

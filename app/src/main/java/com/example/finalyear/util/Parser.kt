@@ -96,7 +96,6 @@ class Parser {
             const val I0_INDEX24 = 150
             val CRC_POS = BytePos(180, 16)
             val IDOT_POS = BytePos(278, 14)
-            const val A_B_LENGTH = 8
             val A0_POS = BytePos(68, 8)
             val A1_POS = BytePos(76, 8)
             val A2_POS = BytePos(90, 8)
@@ -194,8 +193,17 @@ class Parser {
         }
 
         fun setIonoCorrections() {
-            for (navData in partialNavDataList) {
-                navData.inner.iono = ionoCorrections.clone()
+            val hasBroadcostIono = ionoCorrections.alpha.any { it != 0.0 }
+
+            for (partialNavData in partialNavDataList) {
+                if (partialNavData.isComplete()) {
+                    val navData = partialNavData.inner
+
+                    val hasSuplIono = navData.iono.alpha.all { it == 0.0 }
+                    if (hasSuplIono && hasBroadcostIono) {
+                        navData.iono = ionoCorrections.clone()
+                    }
+                }
             }
         }
 

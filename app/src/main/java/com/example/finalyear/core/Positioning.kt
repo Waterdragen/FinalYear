@@ -1,6 +1,7 @@
 package com.example.finalyear.core
 
 import android.util.Log
+import com.example.finalyear.coord.Hk1980
 import com.example.finalyear.math.Const
 import com.example.finalyear.math.MathFn
 import com.example.finalyear.model.Ionospheric
@@ -8,6 +9,7 @@ import com.example.finalyear.model.Tropospheric
 import com.example.finalyear.coord.Xyz
 import org.ejml.simple.SimpleMatrix
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 object Positioning {
     fun findMatchingNavData(navDataList: List<NavData>,
@@ -26,6 +28,7 @@ object Positioning {
         return bestNav
     }
 
+    // Least squares
     fun lsSingleEpoch(refNavDataList: List<NavData>,
                       refObsDataList: List<ObsDataWithRange>,
                       mode: Mode): Xyz {
@@ -157,11 +160,47 @@ object Positioning {
 
         fun lsSingleEpoch(refNavDataList: List<NavData>,
                           refObsDataList: List<ObsDataWithRange>): Xyz {
-            return Positioning.lsSingleEpoch(
+            return lsSingleEpoch(
                 refNavDataList = refNavDataList,
                 refObsDataList = refObsDataList,
                 mode = this,
             )
         }
+    }
+
+    fun twoSigmaRejectionAvg(posList: List<Hk1980.Grid>): Hk1980.Grid {
+        require(posList.isNotEmpty())  // Outer function should handle emptiness, not here
+        if (posList.size == 1) {
+            return posList[0]
+        }
+
+        var rawMeanPos = Hk1980.Grid(0.0, 0.0, 0.0)
+        for (pos in posList) {
+            rawMeanPos.addAssign(pos)
+        }
+        rawMeanPos.divNum(posList.size.toDouble())
+
+        val errSqList = posList.map {
+            val dE = it.e - rawMeanPos.e
+            val dN = it.n - rawMeanPos.n
+            val dH = it.h - rawMeanPos.h
+            dE * dE + dN * dN + dH * dH  // error^2 = sqrt(dE^2 + dN^2 + dH^2)^2, where error = delta distance
+        }
+        val sigmaDist = sqrt(errSqList.sum() / (posList.size - 1))
+        val avgPos = Hk1980.Grid(0.0, 0.0, 0.0)
+        var count = 0
+        for (pos in posList) {
+            val dE = pos.e - rawMeanPos.e
+            val dN = pos.n - rawMeanPos.n
+            val dH = pos.h - rawMeanPos.h
+            val deltaDist = sqrt(dE * dE + dN * dN + dH * dH)
+
+            if (deltaDist < 2 * sigmaDist) {
+                avgPos.addAssign(pos)
+                count++
+            }
+        }
+        avgPos.divNum(count.toDouble())
+        return avgPos
     }
 }
