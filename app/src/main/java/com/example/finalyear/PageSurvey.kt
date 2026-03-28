@@ -24,15 +24,14 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.example.finalyear.core.HKNtripClient
 import com.example.finalyear.core.NavData
-import com.example.finalyear.core.ObsData
 import com.example.finalyear.dgps.Rtcm
-import com.example.finalyear.io.serialize
+import com.example.finalyear.io.CsvWriter
+import com.example.finalyear.io.JsonParser
 import com.example.finalyear.io.LogText
 import com.example.finalyear.util.Parser
 import java.io.File
 import java.time.LocalDateTime
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicReference
 
 class PageSurvey : Fragment() {
     companion object {
@@ -340,30 +339,27 @@ class PageSurvey : Fragment() {
         val dt = LocalDateTime.now()
         val filesDir = requireContext().filesDir
         val fileNameBase = "%d-%02d-%02d-%02d%02d%02d".format(dt.year, dt.monthValue, dt.dayOfMonth, dt.hour, dt.minute, dt.second)
-        Log.d("GNSS", fileNameBase)
-        val navFileName = "$fileNameBase-nav.csv"
-        val navFile = File(filesDir, navFileName)
-        NavData.writeCsvHeader(navFile)
+        val navFile = File(filesDir, "$fileNameBase-nav.csv")
+        CsvWriter.writeNavDataHeader(navFile)
 
         for (partialNavData in decoder.partialNavDataList) {
             if (!partialNavData.isComplete()) continue
 
-            partialNavData.inner.writeCsvRow(navFile)
+            CsvWriter.writeNavDataRow(navFile, partialNavData.inner)
         }
 
-        val obsFileName = "$fileNameBase-obs.csv"
-        val obsFile = File(filesDir, obsFileName)
-        ObsData.writeCsvHeader(obsFile)
+        val obsFile = File(filesDir, "$fileNameBase-obs.csv")
+        CsvWriter.writeObsDataHeader(obsFile)
 
         for (obsDataQueue in decoder.obsDataList) {
             for (obsData in obsDataQueue) {
-                obsData.writeCsvRow(obsFile)
+                CsvWriter.writeObsDataRow(obsFile, obsData)
             }
         }
         decoder.clearData()
 
         // Write DGNSS to text file
-        val dgnssText = stationRtcmMap.serialize()
+        val dgnssText = JsonParser.serializeDgnss(stationRtcmMap)
         LogText().saveText(dgnssText, "$fileNameBase-dgnss.json")
     }
 

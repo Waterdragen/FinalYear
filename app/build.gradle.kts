@@ -48,6 +48,7 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.protolite.well.known.types)
+    implementation(kotlin("reflect"))
     implementation("com.github.doyaaaaaken:kotlin-csv:1.9.0")
     implementation("com.google.guava:guava:31.1-android")
     implementation("joda-time:joda-time:2.10.14")

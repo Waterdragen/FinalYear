@@ -226,7 +226,7 @@ class PageSurveyStore : Fragment() {
             try {
                 val sppPos = Positioning.Mode.Spp.leastSquares(sppNavList, sppObsList)
                 sppPosList.add(Hk1980.Grid.fromWgs84Xyz(sppPos))
-            } catch (e: MyException.NotEnoughSatellites) {
+            } catch (e: MyException.NotEnoughObservations) {
                 continue
             } catch (e: MyException.LsConvergeFail) {
                 continue
@@ -237,7 +237,7 @@ class PageSurveyStore : Fragment() {
             try {
                 val dgnssPos = Positioning.Mode.Dgnss.leastSquares(dgnssNavList, dgnssObsList)
                 dgnssPosList.add(Hk1980.Grid.fromWgs84Xyz(dgnssPos))
-            } catch (e: MyException.NotEnoughSatellites) {
+            } catch (e: MyException.NotEnoughObservations) {
                 continue
             } catch (e: MyException.LsConvergeFail) {
                 continue
@@ -245,13 +245,13 @@ class PageSurveyStore : Fragment() {
         }
 
         if (sppPosList.isEmpty()) {
-            showDialog("No valid epochs",
-                "SPP zero epochs after filtering (there are enough satellites but not enough observations).")
+            showDialog("Not enough observations",
+                "SPP zero epochs after filtering SNR and elevation.\n(there are enough satellites but not enough observations)")
             return
         }
         if (dgnssPosList.isEmpty()) {  // SPP available but not DGNSS
-            showDialog("DGNSS unavailable",
-                       "Unknown error.")
+            showDialog("Warning: DGNSS unavailable",
+                       "DGNSS zero epochs after filtering SNR and elevation.\n(there are enough satellites but not enough observations)")
         }
 
         val sppAvgPos = Positioning.twoSigmaRejectionAvg(sppPosList)

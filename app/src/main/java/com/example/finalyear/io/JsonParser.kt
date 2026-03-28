@@ -21,28 +21,32 @@ object JsonParser {
             throw MyException.JsonParseError(file)
         }
     }
-}
 
-object ByteArrayBase64Serializer : KSerializer<ByteArray> {
-    override val descriptor: SerialDescriptor =
-        PrimitiveSerialDescriptor("ByteArrayBase64", PrimitiveKind.STRING)
-
-    override fun serialize(encoder: Encoder, value: ByteArray) {
-        val encoded = Base64.getEncoder().encodeToString(value)
-        encoder.encodeString(encoded)
+    fun serializeDgnss(stationRtcmMap: Map<Int, Rtcm>): String {
+        return rtcmJson.encodeToString(stationRtcmMap)
     }
 
-    override fun deserialize(decoder: Decoder): ByteArray {
-        val encoded = decoder.decodeString()
-        return Base64.getDecoder().decode(encoded)
+    private val rtcmJson = Json {
+        ignoreUnknownKeys = false
+        encodeDefaults = false
+        prettyPrint = true
+    }
+
+    object ByteArrayBase64Serializer : KSerializer<ByteArray> {
+        override val descriptor: SerialDescriptor =
+            PrimitiveSerialDescriptor("ByteArrayBase64", PrimitiveKind.STRING)
+
+        override fun serialize(encoder: Encoder, value: ByteArray) {
+            val encoded = Base64.getEncoder().encodeToString(value)
+            encoder.encodeString(encoded)
+        }
+
+        override fun deserialize(decoder: Decoder): ByteArray {
+            val encoded = decoder.decodeString()
+            return Base64.getDecoder().decode(encoded)
+        }
     }
 }
 
-private val rtcmJson = Json {
-    ignoreUnknownKeys = false
-    encodeDefaults = false
-    prettyPrint = true
-}
-fun Map<Int, Rtcm>.serialize(): String =
-    rtcmJson.encodeToString(this)
+
 

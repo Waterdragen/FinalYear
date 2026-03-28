@@ -1,5 +1,6 @@
 package com.example.finalyear.io
 
+import android.util.Log
 import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
 import com.example.finalyear.core.NavData
 import com.example.finalyear.core.ObsData
@@ -17,6 +18,7 @@ object CsvParser {
         return try {
             tryParseNavDataListInner(file)
         } catch (e: Exception) {
+            Log.e("GNSS", e.stackTraceToString())
             throw MyException.CsvParseError(file)
         }
     }
@@ -90,6 +92,7 @@ object CsvParser {
         return try {
             tryParseObsDataListInner(file)
         } catch (e: Exception) {
+            Log.e("GNSS", e.stackTraceToString())
             throw MyException.CsvParseError(file)
         }
     }
@@ -130,6 +133,7 @@ object CsvParser {
         return try {
             tryParseHkStationListInner(file)
         } catch (e: Exception) {
+            Log.e("GNSS", e.stackTraceToString())
             throw MyException.CsvParseError(file)
         }
     }

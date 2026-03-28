@@ -32,6 +32,9 @@ object Positioning {
     fun lsSingleEpoch(refNavDataList: List<NavData>,
                       refObsDataList: List<ObsDataWithRange>,
                       mode: Mode): Xyz {
+        require(refNavDataList.size == refObsDataList.size) { "Nav and obs sizes mismatch" }
+        require(refNavDataList.size >= 4) { "Unhandled not enough satellites logic"}
+
         // Location of Sha Tin, Hong Kong, roughly the "centroid" of Hong Kong
         val approxPos = Xyz(-2414000.0, 5386000.0, 2417000.0)
 
@@ -41,7 +44,6 @@ object Positioning {
             val match = findMatchingNavData(refNavDataList, obsData) ?: continue
             val elevDeg = elevationDegOfSatellite(approxPos, navData = match, obsData = obsData)
             if (elevDeg < 15.0) {
-                Log.d("GNSS", "Rejected with elevation: $elevDeg")
                 continue
             }
 
@@ -51,7 +53,7 @@ object Positioning {
 
         val numberOfObs = obsDataList.size
         if (numberOfObs < 4) {
-            throw MyException.NotEnoughSatellites("Expected 4 satellites, got $numberOfObs")
+            throw MyException.NotEnoughObservations()
         }
 
         val pseudorangeList = SimpleMatrix(numberOfObs, 1)

@@ -1,7 +1,7 @@
 package com.example.finalyear.dgps
 
 import android.util.Log
-import com.example.finalyear.io.ByteArrayBase64Serializer
+import com.example.finalyear.io.JsonParser.ByteArrayBase64Serializer
 import com.example.finalyear.math.GpsTime
 import kotlinx.serialization.Serializable
 import kotlin.math.floor

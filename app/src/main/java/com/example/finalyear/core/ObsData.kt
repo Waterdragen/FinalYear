@@ -2,7 +2,6 @@ package com.example.finalyear.core
 
 import com.example.finalyear.math.Const
 import com.example.finalyear.math.MathFn
-import java.io.File
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -29,52 +28,6 @@ data class ObsData (
     val adrUncertaintyMeters: Double,
     val signalToNoiseRatioDb: Double,
 ) {
-    companion object {
-        val FIELDS = arrayOf(
-            "prn",
-            "gpsTimeNs",
-            "rxTimeNs",
-            "txTimeNs",
-            "txTimeOffsetNs",
-
-            "pseudorangeRateMps",
-            "pseudorangeRateUncertaintyMps",
-            "adrMeters",
-            "adrMetersValid",
-            "adrUncertaintyMeters",
-            "signalToNoiseRatioDb"
-        )
-
-        fun writeCsvHeader(file: File) {
-            val sb = StringBuilder()
-            for (field in FIELDS) {
-                sb.append(field)
-                sb.append(',')
-            }
-            sb.append('\n')
-            file.writeText(sb.toString())
-        }
-    }
-
-    fun writeCsvRow(file: File) {
-        val sb = StringBuilder()
-        sb.append(prn.toString()); sb.append(',')
-        sb.append(gpsTimeNs.toString()); sb.append(',')
-        sb.append(rxTimeNs.toString()); sb.append(',')
-        sb.append(txTimeNs.toString()); sb.append(',')
-        sb.append(txTimeOffsetNs.toString()); sb.append(',')
-
-        sb.append(pseudorangeRateMps.toString()); sb.append(',')
-        sb.append(pseudorangeRateUncertaintyMps.toString()); sb.append(',')
-        sb.append(adrMeters.toString()); sb.append(',')
-        sb.append(adrMetersValid.toString()); sb.append(',')
-        sb.append(adrUncertaintyMeters.toString()); sb.append(',')
-        sb.append(signalToNoiseRatioDb.toString()); sb.append(',')
-        sb.append('\n')
-
-        file.appendText(sb.toString())
-    }
-
     fun clone(): ObsData {
         return ObsData(
             prn, gpsTimeNs, rxTimeNs, txTimeNs, txTimeOffsetNs, pseudorangeRateMps, pseudorangeRateUncertaintyMps, adrMeters, adrMetersValid, adrUncertaintyMeters, signalToNoiseRatioDb

@@ -3,14 +3,12 @@ package com.example.finalyear.core
 import android.location.cts.nano.Ephemeris
 import android.location.cts.nano.Ephemeris.GpsEphemerisProto
 import android.location.cts.suplClient.SuplRrlpController
-import android.util.Log
 import com.example.finalyear.math.Const
 import com.example.finalyear.math.MathFn
 import com.example.finalyear.model.Ionospheric
 import com.example.finalyear.coord.Xyz
 import com.example.finalyear.math.GpsTime
 import org.joda.time.DateTime
-import java.io.File
 import kotlin.math.*
 
 data class NavData(
@@ -51,61 +49,6 @@ data class NavData(
     var iono: Ionospheric = Ionospheric(),
 ) {
     companion object {
-        val FIELDS = arrayOf(
-            "prn",
-            "dateTime",
-            "svClockBias",
-            "svClockDrift",
-            "svClockDriftRate",
-            "iode",
-            "crs",
-            "deltaN",
-            "m0",
-            "cuc",
-            "ecc",
-            "cus",
-            "sqrtA",
-            "t0",
-            "cic",
-            "omega0",
-            "cis",
-            "i0",
-            "crc",
-            "omega",
-            "dOmega",
-            "dI",
-            "codeL2",
-            "weekNo",
-            "l2PDataFlag",
-            "svAccuracy",
-            "svHealth",
-            "tgd",
-            "iodc",
-            "transmissionTimeOfMsg",
-            "fitInterval",
-            "spare1",
-            "spare2",
-
-            "alpha0",
-            "alpha1",
-            "alpha2",
-            "alpha3",
-            "beta0",
-            "beta1",
-            "beta2",
-            "beta3",
-        )
-
-        fun writeCsvHeader(file: File) {
-            val sb = StringBuilder()
-            for (field in FIELDS) {
-                sb.append(field)
-                sb.append(',')
-            }
-            sb.append('\n')
-            file.writeText(sb.toString())
-        }
-
         fun fromGpsEphemerisProto(ephem: GpsEphemerisProto): NavData {
             return NavData(
                 prn = ephem.prn,
@@ -158,54 +101,6 @@ data class NavData(
                     navData
                 }
         }
-    }
-
-    fun writeCsvRow(file: File) {
-        val sb = StringBuilder()
-        sb.append(prn.toString()); sb.append(',')
-        sb.append(dateTime.toString()); sb.append(',')
-        sb.append(svClockBias.toString()); sb.append(',')
-        sb.append(svClockDrift.toString()); sb.append(',')
-        sb.append(svClockDriftRate.toString()); sb.append(',')
-        sb.append(iode.toString()); sb.append(',')
-        sb.append(crs.toString()); sb.append(',')
-        sb.append(deltaN.toString()); sb.append(',')
-        sb.append(m0.toString()); sb.append(',')
-        sb.append(cuc.toString()); sb.append(',')
-        sb.append(ecc.toString()); sb.append(',')
-        sb.append(cus.toString()); sb.append(',')
-        sb.append(sqrtA.toString()); sb.append(',')
-        sb.append(t0.toString()); sb.append(',')
-        sb.append(cic.toString()); sb.append(',')
-        sb.append(omega0.toString()); sb.append(',')
-        sb.append(cis.toString()); sb.append(',')
-        sb.append(i0.toString()); sb.append(',')
-        sb.append(crc.toString()); sb.append(',')
-        sb.append(omega.toString()); sb.append(',')
-        sb.append(dOmega.toString()); sb.append(',')
-        sb.append(dI.toString()); sb.append(',')
-        sb.append(codeL2.toString()); sb.append(',')
-        sb.append(weekNo.toString()); sb.append(',')
-        sb.append(l2PDataFlag.toString()); sb.append(',')
-        sb.append(svAccuracy.toString()); sb.append(',')
-        sb.append(svHealth.toString()); sb.append(',')
-        sb.append(tgd.toString()); sb.append(',')
-        sb.append(iodc.toString()); sb.append(',')
-        sb.append(transmissionTimeOfMsg.toString()); sb.append(',')
-        sb.append(fitInterval.toString()); sb.append(',')
-        sb.append(spare1.toString()); sb.append(',')
-        sb.append(spare2.toString()); sb.append(',')
-        Log.d("GNSS", iono.alpha.contentToString())
-        Log.d("GNSS", iono.beta.contentToString())
-        for (i in 0 until 4) {
-            sb.append(iono.alpha[i].toString()); sb.append(',')
-        }
-        for (i in 0 until 4) {
-            sb.append(iono.beta[i].toString()); sb.append(',')
-        }
-        sb.append('\n')
-
-        file.appendText(sb.toString())
     }
 
     fun gpsTimeSecs(): Double {
