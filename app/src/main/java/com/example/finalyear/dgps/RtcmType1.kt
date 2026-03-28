@@ -1,11 +1,10 @@
 package com.example.finalyear.dgps
 
-import android.util.Log
 import com.example.finalyear.util.BitArray
 
 class RtcmType1 {
     companion object {
-        fun decode(rtcm: Rtcm): Int {
+        fun decode(rtcm: Rtcm) {
             // RTCM v2 type 1: differential GPS correction (GPS only)
             var i = 48  // start of type-1 body (after 48-bit header)
             while (i + 40 <= rtcm.len * 8) {
@@ -47,7 +46,6 @@ class RtcmType1 {
                     udre = udre
                 )
             }
-            return 7
         }
     }
 }

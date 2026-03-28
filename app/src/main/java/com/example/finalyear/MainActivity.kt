@@ -3,14 +3,9 @@
 package com.example.finalyear
 
 import android.os.Bundle
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
-
 import com.example.finalyear.databinding.ActivityMainBinding
-import org.joda.time.DateTime
-import org.joda.time.DateTimeZone
-import org.joda.time.Minutes
 
 class MainActivity : AppCompatActivity() {
     lateinit var binding: ActivityMainBinding

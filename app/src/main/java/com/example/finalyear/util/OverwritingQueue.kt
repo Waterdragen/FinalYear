@@ -10,8 +10,6 @@ class OverwritingQueue<T>(val capacity: Int) : Iterable<T> {
     private var headPos = 0
     private var tailPos = 0
 
-    fun isEmpty(): Boolean = size == 0
-    fun isFull(): Boolean = size == capacity
     fun size(): Int = size
 
     fun push(item: T) {
@@ -43,6 +41,7 @@ class OverwritingQueue<T>(val capacity: Int) : Iterable<T> {
         buffer.fill(null)
     }
 
+    // Iterator from memory layout, not push order
     override fun iterator(): Iterator<T> = object : Iterator<T> {
         var index = 0
         override fun hasNext(): Boolean = index < size
@@ -52,9 +51,6 @@ class OverwritingQueue<T>(val capacity: Int) : Iterable<T> {
             return get(index++) ?: throw IllegalStateException("Unexpected null in non null queue")
         }
     }
-
-    // this iterator disregards the items pushed
-    fun unorderedIterator(): Iterator<T> = buffer.filterNotNull().iterator()
 
     override fun toString(): String {
         return iterator().asSequence()

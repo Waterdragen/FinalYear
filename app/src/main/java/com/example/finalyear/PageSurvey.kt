@@ -372,16 +372,6 @@ class PageSurvey : Fragment() {
             .show()
     }
 
-    fun getConstellationName(type: Int): String {
-        return when (type) {
-            GnssStatus.CONSTELLATION_GPS -> "GPS"
-            GnssStatus.CONSTELLATION_GLONASS -> "GLONASS"
-            GnssStatus.CONSTELLATION_GALILEO -> "Galileo"
-            GnssStatus.CONSTELLATION_BEIDOU -> "BeiDou"
-            else -> "Unknown"
-        }
-    }
-
     enum class GnssPermission {
         NotGranted, Denied, GpsDisabled, GnssLackingCaps, Full,
     }

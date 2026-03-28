@@ -1,8 +1,6 @@
 package com.example.finalyear.core
 
-import android.util.Log
 import com.example.finalyear.dgps.Rtcm
-import com.example.finalyear.math.GpsTime
 
 data class ObsDataWithRange(
     val inner: ObsData,

@@ -9,7 +9,6 @@ import java.io.OutputStream
 import java.net.Socket
 import java.util.Base64
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicReference
 
 class HKNtripClient {
     companion object {

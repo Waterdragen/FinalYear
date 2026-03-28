@@ -184,7 +184,7 @@ object Positioning {
             return posList[0]
         }
 
-        var rawMeanPos = Hk1980.Grid(0.0, 0.0, 0.0)
+        val rawMeanPos = Hk1980.Grid(0.0, 0.0, 0.0)
         for (pos in posList) {
             rawMeanPos.addAssign(pos)
         }

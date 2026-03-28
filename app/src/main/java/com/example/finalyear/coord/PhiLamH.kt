@@ -5,6 +5,10 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 data class PhiLamH (var phi: Double, var lam: Double, var h: Double) {
+    // Rotation matrix from ECEF to ENU
+    // 
+    // Sanz Subirana, J., Juan Zornoza, J.M. and Hernández-Pajares, M. (2011). Transformations between ECEF and ENU coordinates.
+    // >> "where the transformation matrix of (5) [ECEF to ENU] is the transpose of matrix (3) [ENU to ECEF]:"
     fun rotationMatrix(): SimpleMatrix {
         val sinPhi = sin(phi)
         val sinLam = sin(lam)
@@ -22,6 +26,7 @@ data class PhiLamH (var phi: Double, var lam: Double, var h: Double) {
         }
     }
 
+    @Suppress("unused")
     fun toXyz(ellipsoid: Ellipsoid): Xyz {
         val N = ellipsoid.primeVerticalN(phi)
         val x = (N + h) * cos(phi) * cos(lam)
@@ -30,12 +35,14 @@ data class PhiLamH (var phi: Double, var lam: Double, var h: Double) {
         return Xyz(x, y, z)
     }
 
+    @Suppress("unused")
     fun degPretty(): String {
         val latD = radToDegNormalized(phi)
         val lonD = radToDegNormalized(lam)
         return "(Lat %.9f, Lon %.9f, H %.3f)".format(latD, lonD, h)
     }
 
+    @Suppress("unused")
     fun dmsPretty(): String {
         val (latD, latM, latS) = radiansToDms(phi)
         val (lonD, lonM, lonS) = radiansToDms(lam)

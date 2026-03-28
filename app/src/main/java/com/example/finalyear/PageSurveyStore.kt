@@ -11,6 +11,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import com.example.finalyear.coord.Hk1980
 import com.example.finalyear.core.HkStation
 import com.example.finalyear.core.MyException
 import com.example.finalyear.core.NavData
@@ -18,16 +19,17 @@ import com.example.finalyear.core.ObsData
 import com.example.finalyear.core.Positioning
 import com.example.finalyear.dgps.Rtcm
 import com.example.finalyear.io.CsvParser
-import com.example.finalyear.coord.Hk1980
 import com.example.finalyear.io.JsonParser
 import com.example.finalyear.util.SurveyData
 import java.io.File
-import kotlin.math.*
+import kotlin.math.abs
+import kotlin.math.sqrt
 
 class PageSurveyStore : Fragment() {
     lateinit var btnLoadCsv: Button
     lateinit var btnCalculate: Button
     lateinit var btnLoadStations: ImageButton
+    lateinit var btnChangeStation: ImageButton
     lateinit var btnClearStation: ImageButton
 
     lateinit var textLoadedFile: TextView
@@ -67,6 +69,8 @@ class PageSurveyStore : Fragment() {
         btnCalculate.setOnClickListener { onBtnCalculatePressed() }
         btnLoadStations = view.findViewById(R.id.btnLoadStations)
         btnLoadStations.setOnClickListener { onBtnLoadStationsPressed() }
+        btnChangeStation = view.findViewById(R.id.btnChangeStation)
+        btnChangeStation.setOnClickListener { onBtnChangeStationPressed() }
         btnClearStation = view.findViewById(R.id.btnClearStation)
         btnClearStation.setOnClickListener { onBtnClearStationPressed() }
 
@@ -113,8 +117,26 @@ class PageSurveyStore : Fragment() {
             .show()
     }
 
-    private fun onBtnClearStationPressed() {
+    private fun onBtnChangeStationPressed() {
+        val names = nearestHkStationList.map { "${it.stnNum} (${it.locality})" }.toTypedArray()
 
+        AlertDialog.Builder(requireContext())
+            .setTitle("Choose HK benchmark")
+            .setItems(names) { _, index ->
+                computeErrorWithClosestHkStation(
+                    overrideWithSelected = nearestHkStationList[index]
+                )
+            }
+            .show()
+    }
+
+    private fun onBtnClearStationPressed() {
+        textSppDiffResult.text = ""
+        textDgnssDiffResultE.text = ""
+        textDgnssDiffResultN.text = ""
+        textDgnssDiffResultH.text = ""
+        textStationName.text = ""
+        textStationPos.text = ""
     }
 
     private fun listInternalNavCsvFiles(): List<File> {
@@ -181,14 +203,12 @@ class PageSurveyStore : Fragment() {
 
     private fun loadStationCsvFile(stationFile: File) {
         try {
-            val hkStationList = CsvParser.tryParseHkStationList(stationFile)
-            if (hkStationList == null) {
-                showDialog("Warning", "Failed to parse stations")
-                return
-            }
-            this.hkStationList = hkStationList
+            this.hkStationList = CsvParser.tryParseHkStationList(stationFile)
         } catch (e: MyException.FileNotFound) {
             showDialog("Warning", e.message ?: "File does not exist")
+            return
+        } catch (e: MyException.CsvParseError) {
+            showDialog("Warning", e.message ?: "Failed to parse stations")
             return
         }
         computeErrorWithClosestHkStation()
@@ -280,20 +300,25 @@ class PageSurveyStore : Fragment() {
             .show()
     }
 
-    fun computeErrorWithClosestHkStation() {
+    fun computeErrorWithClosestHkStation(overrideWithSelected: HkStation? = null) {
         val sppEnh = calculatedSppEnh ?: return
         val dgnssEnh = calculatedDgnssEnh ?: return
         val hkStationList = hkStationList ?: return
-        nearestHkStationList = HkStation.findNearest(
-            hkStationList = hkStationList,
-            easting = dgnssEnh.e,
-            northing = dgnssEnh.n
-        )
-        val hkStation = nearestHkStationList.getOrNull(0) ?: return  // use the nearest station
+        val hkStation = if (overrideWithSelected == null) {
+            nearestHkStationList = HkStation.findNearest(
+                hkStationList = hkStationList,
+                easting = dgnssEnh.e,
+                northing = dgnssEnh.n
+            )
+            nearestHkStationList.getOrNull(0) ?: return  // use the nearest station
+        } else {
+            overrideWithSelected  // override with user selected station
+        }
+
         // If the station is close enough, we are probably surveying the station
         val dE = dgnssEnh.e - hkStation.easting
         val dN = dgnssEnh.n - hkStation.northing
-        if (sqrt(dE * dE + dN * dN) > 100) return
+        if (overrideWithSelected == null && sqrt(dE * dE + dN * dN) > 100) return
 
         textStationName.text = "Station name: ${hkStation.stnNum} (${hkStation.locality})"
         textStationPos.text = String.format("Coordinates: (E %.3f, N %.3f, H %.3f)", hkStation.easting, hkStation.northing, hkStation.height)

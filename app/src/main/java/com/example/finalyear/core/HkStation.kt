@@ -1,6 +1,5 @@
 package com.example.finalyear.core
 
-import android.util.Log
 import kotlin.math.abs
 import kotlin.math.max
 

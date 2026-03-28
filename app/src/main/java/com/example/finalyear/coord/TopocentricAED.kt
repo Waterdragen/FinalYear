@@ -40,8 +40,8 @@ data class TopocentricAED(
 
             val distance = sqrt(
                 deltaPos[0] * deltaPos[0] +
-                        deltaPos[1] * deltaPos[1] +
-                        deltaPos[2] * deltaPos[2]
+                    deltaPos[1] * deltaPos[1] +
+                    deltaPos[2] * deltaPos[2]
             )
 
             return TopocentricAED(azimuth, elevation, distance)
