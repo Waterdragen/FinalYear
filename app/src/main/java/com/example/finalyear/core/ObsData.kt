@@ -102,7 +102,7 @@ data class ObsData (
             bL * d / (2 * snrLinear)
             * (1 + 2 / ((2-d) * snrLinear * t))
         )
-        val sigmaM = sigmaSec * Const.c * Const.GPS_CHIP_WIDTH_T_C_SEC
+        val sigmaM = sigmaSec * Const.c
         return ObsDataWithRange(
             inner = this,
             pseudorange = pseudorange,

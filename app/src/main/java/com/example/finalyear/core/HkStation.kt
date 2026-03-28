@@ -12,6 +12,10 @@ data class HkStation(
     val height: Double,
 ) {
     companion object {
+        // 1. Sort by easting
+        // 2. Find the quartile (easting) to start linear search
+        // 3. Store all stations dE and dN within 3km
+        // 4. Sort by euclidean distance, return at most 5 candidates
         fun findNearest(hkStationList: List<HkStation>, easting: Double, northing: Double): List<HkStation> {
             val size = hkStationList.size
             // 1/4, 1/2, 3/4 of the list

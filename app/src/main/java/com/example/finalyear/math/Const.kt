@@ -24,8 +24,10 @@ object Const {
     const val B_NON_HYDROSTATIC = 0.0018576
     const val C_NON_HYDROSTATIC = 0.062741
 
-    const val GPS_CHIP_WIDTH_T_C_SEC = 1e-6
-    const val GPS_BANDWIDTH = 1
-    const val GPS_CORRELATOR_SPACING_IN_CHIPS = 0.1
-    const val GPS_DLL_AVERAGING_TIME_SEC = 20e-3
+    // Van Dierendonck (1996) code tracking jitter model
+    const val GPS_BANDWIDTH = 2.0                    // B_L (Hz)
+    const val GPS_CORRELATOR_SPACING_IN_CHIPS = 0.1  // d
+    const val GPS_DLL_AVERAGING_TIME_SEC = 20e-3     // T (ms)
+
+    const val ANTENNA_HEIGHT_M = 1.0
 }

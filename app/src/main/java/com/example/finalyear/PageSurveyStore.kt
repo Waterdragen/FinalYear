@@ -19,7 +19,7 @@ import com.example.finalyear.core.Positioning
 import com.example.finalyear.dgps.Rtcm
 import com.example.finalyear.io.CsvParser
 import com.example.finalyear.coord.Hk1980
-import com.example.finalyear.io.deserializeToRtcmMap
+import com.example.finalyear.io.JsonParser
 import com.example.finalyear.util.SurveyData
 import java.io.File
 import kotlin.math.*
@@ -138,58 +138,35 @@ class PageSurveyStore : Fragment() {
 
     private fun loadNavCsvFile(navFile: File) {
         val context = requireContext()
-        val baseName: String
-        val navDataList: List<NavData>?
-        val obsDataList: List<ObsData>?
-        val stationRtcmMapOptional: Map<Int, Rtcm>
+        val navDataList: List<NavData>
+        val obsDataList: List<ObsData>
+        val stationRtcmMap: Map<Int, Rtcm>
 
         if (!navFile.name.endsWith("-nav.csv")) {
             showDialog("Error", "Mangled file name `${navFile.name}`, should have nav or obs suffix")
             return
         }
+        val baseName = navFile.name.removeSuffix("-nav.csv")
 
-        val navCsvParser = CsvParser.tryFromFile(navFile)
-        if (navCsvParser == null) {
-            showDialog("Fatal", "Nav file does not exist after selection")
+        try {
+            navDataList = CsvParser.tryParseNavDataList(navFile)
+            val obsFile = File(context.filesDir, "$baseName-obs.csv")
+            obsDataList = CsvParser.tryParseObsDataList(obsFile)
+            val dgnssFile = File(context.filesDir, "$baseName-dgnss.json")
+            stationRtcmMap = JsonParser.tryParseDgnss(dgnssFile)
+        } catch (e: MyException.FileNotFound) {
+            showDialog("Error", e.message ?: "File does not exist")
             return
-        }
-        baseName = navFile.name.removeSuffix("-nav.csv")
-        val obsFileName = "$baseName-obs.csv"
-        val obsCsvParser = CsvParser.tryFromFile(File(context.filesDir, obsFileName))
-        if (obsCsvParser == null) {
-            showDialog("Error", "Obs file does not exist")
+        } catch (e: MyException.CsvParseError) {
+            showDialog("Error", e.message ?: "Failed to parse CSV")
             return
-        }
-        navDataList = navCsvParser.tryParseNavDataList()
-        obsDataList = obsCsvParser.tryParseObsDataList()
-
-        val dgnssFileName = "$baseName-dgnss.json"
-        val dgnssFile = File(context.filesDir, dgnssFileName)
-        if (!dgnssFile.exists()) {
-            showDialog("Error", "DGNSS file does not exist")
-            Log.e("GNSS", "DGNSS file does not exist")
-            return
-        }
-        stationRtcmMapOptional = try {
-            val dgnssText = dgnssFile.readText(Charsets.UTF_8)
-            dgnssText.deserializeToRtcmMap()
-        } catch (e: Exception) {
-            showDialog("Error", "Failed to parse DGNSS file")
-            Log.e("GNSS", e.stackTraceToString())
-            return
-        }
-
-        if (navDataList == null) {
-            showDialog("Error", "Unable to parse nav data csv")
-            return
-        }
-        if (obsDataList == null) {
-            showDialog("Error", "unable to parse obs data csv")
+        } catch (e: MyException.JsonParseError) {
+            showDialog("Error", e.message ?: "Failed to parse JSON")
             return
         }
 
         val obsDataListSpp = obsDataList.map { obsData -> obsData.computePseudorange() }
-        val obsDataListDgnss = obsDataListSpp.mapNotNull{ obsData -> obsData.adjustPseudorange(stationRtcmMapOptional) }
+        val obsDataListDgnss = obsDataListSpp.mapNotNull{ obsData -> obsData.adjustPseudorange(stationRtcmMap) }
 
         surveyDataSpp = SurveyData.new(baseName, navDataList, obsDataListSpp)
         val newSurveyData = SurveyData.new(baseName, navDataList, obsDataListDgnss)
@@ -203,17 +180,17 @@ class PageSurveyStore : Fragment() {
     }
 
     private fun loadStationCsvFile(stationFile: File) {
-        val hkStationCsvParser = CsvParser.tryFromFile(stationFile)
-        if (hkStationCsvParser == null) {
-            showDialog("Warning", "File does not exist")
+        try {
+            val hkStationList = CsvParser.tryParseHkStationList(stationFile)
+            if (hkStationList == null) {
+                showDialog("Warning", "Failed to parse stations")
+                return
+            }
+            this.hkStationList = hkStationList
+        } catch (e: MyException.FileNotFound) {
+            showDialog("Warning", e.message ?: "File does not exist")
             return
         }
-        val hkStationList = hkStationCsvParser.tryParseHkStationList()
-        if (hkStationList == null) {
-            showDialog("Warning", "Failed to parse stations")
-            return
-        }
-        this.hkStationList = hkStationList
         computeErrorWithClosestHkStation()
         showDialog("Success", "Loaded HK stations list")
     }
@@ -247,7 +224,7 @@ class PageSurveyStore : Fragment() {
 
         for (sppObsList in surveyDataSpp.obsDataListByEpoch.values) {
             try {
-                val sppPos = Positioning.Mode.Spp.lsSingleEpoch(sppNavList, sppObsList)
+                val sppPos = Positioning.Mode.Spp.leastSquares(sppNavList, sppObsList)
                 sppPosList.add(Hk1980.Grid.fromWgs84Xyz(sppPos))
             } catch (e: MyException.NotEnoughSatellites) {
                 continue
@@ -258,7 +235,7 @@ class PageSurveyStore : Fragment() {
 
         for (dgnssObsList in surveyDataDgnss.obsDataListByEpoch.values) {
             try {
-                val dgnssPos = Positioning.Mode.Dgnss.lsSingleEpoch(dgnssNavList, dgnssObsList)
+                val dgnssPos = Positioning.Mode.Dgnss.leastSquares(dgnssNavList, dgnssObsList)
                 dgnssPosList.add(Hk1980.Grid.fromWgs84Xyz(dgnssPos))
             } catch (e: MyException.NotEnoughSatellites) {
                 continue
@@ -272,9 +249,15 @@ class PageSurveyStore : Fragment() {
                 "SPP zero epochs after filtering (there are enough satellites but not enough observations).")
             return
         }
+        if (dgnssPosList.isEmpty()) {  // SPP available but not DGNSS
+            showDialog("DGNSS unavailable",
+                       "Unknown error.")
+        }
 
         val sppAvgPos = Positioning.twoSigmaRejectionAvg(sppPosList)
         val dgnssAvgPos = Positioning.twoSigmaRejectionAvg(dgnssPosList)
+        Positioning.adjustAntennaHeight(sppAvgPos)
+        Positioning.adjustAntennaHeight(dgnssAvgPos)
 
         calculatedSppEnh = sppAvgPos
         calculatedDgnssEnh = dgnssAvgPos

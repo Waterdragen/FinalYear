@@ -32,10 +32,18 @@ object Positioning {
     fun lsSingleEpoch(refNavDataList: List<NavData>,
                       refObsDataList: List<ObsDataWithRange>,
                       mode: Mode): Xyz {
+        // Location of Sha Tin, Hong Kong, roughly the "centroid" of Hong Kong
+        val approxPos = Xyz(-2414000.0, 5386000.0, 2417000.0)
+
         val navDataList = arrayListOf<NavData>()
         val obsDataList = arrayListOf<ObsDataWithRange>()
         for (obsData in refObsDataList) {
             val match = findMatchingNavData(refNavDataList, obsData) ?: continue
+            val elevDeg = elevationDegOfSatellite(approxPos, navData = match, obsData = obsData)
+            if (elevDeg < 15.0) {
+                Log.d("GNSS", "Rejected with elevation: $elevDeg")
+                continue
+            }
 
             navDataList.add(match)
             obsDataList.add(obsData)
@@ -58,9 +66,9 @@ object Positioning {
         val satClockErrList = SimpleMatrix(numberOfObs, 1)
 
         // Least squares adjustments
-        val approxPos = Xyz(-2414000.0, 5386000.0, 2417000.0)  // Location of Sha Tin, Hong Kong, roughly the "centroid" of Hong Kong
-
-        var rxClockBiasM = 0.0
+        // Liu, Z.Z. (2025) Handout – V08 Satellite Positioning George Lec 5 2025 Feb. 1-41. [lecture notes, pdf] The Hong Kong Polytechnic University, unpublished.
+        // Adapted from my own LSGI3322 Satellite Positioning final project
+        var rxClockBiasM = 0.0  // Solves for the single unknown clock bias
         var adjustments = SimpleMatrix(4, 1)
         adjustments.fill(Double.POSITIVE_INFINITY)
         var iterations = 0
@@ -158,8 +166,8 @@ object Positioning {
         Spp,
         Dgnss;
 
-        fun lsSingleEpoch(refNavDataList: List<NavData>,
-                          refObsDataList: List<ObsDataWithRange>): Xyz {
+        fun leastSquares(refNavDataList: List<NavData>,
+                         refObsDataList: List<ObsDataWithRange>): Xyz {
             return lsSingleEpoch(
                 refNavDataList = refNavDataList,
                 refObsDataList = refObsDataList,
@@ -203,4 +211,19 @@ object Positioning {
         avgPos.divNum(count.toDouble())
         return avgPos
     }
+
+    fun adjustAntennaHeight(pos: Hk1980.Grid) {
+        pos.h -= Const.ANTENNA_HEIGHT_M
+    }
+}
+
+// Rough estimation of elevation angle
+private fun elevationDegOfSatellite(userPos: Xyz, navData: NavData, obsData: ObsDataWithRange): Double {
+    val (satPos, _) = navData.calculateSatPosAndClock(
+        obsData = obsData,
+        approxPseudorange = obsData.pseudorange,
+        rxClockErrSec = 0.0,
+    )
+    val elevationRad = userPos.toTopocentricAED(satPos).elevation
+    return Math.toDegrees(elevationRad)
 }

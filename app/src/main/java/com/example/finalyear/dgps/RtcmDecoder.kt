@@ -3,7 +3,7 @@ package com.example.finalyear.dgps
 import android.util.Log
 import com.example.finalyear.util.BitArray
 
-const val RTCM2PREAMB = 0x66
+const val RTCM2_PREAMBLE = 0x66
 
 class RtcmDecoder {
 
@@ -33,11 +33,11 @@ class RtcmDecoder {
 
                     // Synchronize frame
                     if (nbyte == 0) {
-                        var preamb = ((word shr 22) and 0xFFu).toInt()
+                        var preamble = ((word shr 22) and 0xFFu).toInt()
                         if (word and 0x40000000u != 0u) {
-                            preamb = preamb xor 0xFF
+                            preamble = preamble xor 0xFF
                         }
-                        if (preamb != RTCM2PREAMB) {
+                        if (preamble != RTCM2_PREAMBLE) {
                             continue
                         }
 
@@ -113,15 +113,6 @@ class RtcmDecoder {
 
                     if (messageType == 1) {
                         RtcmType1.decode(rtcm)
-                    }
-
-                    if (messageType == 1) {
-                        for (prn in 1..32) {
-                            val d = rtcm.dgps[prn - 1]
-                            if (d != null) {
-                                // TODO: Handle udre, iod, prc, rrc for each PRN
-                            }
-                        }
                         return rtcm  // Return known RTCM types
                     } else {
                         Log.w("GNSS", "Received RTCM message with unhandled type: $messageType from station $stationId")

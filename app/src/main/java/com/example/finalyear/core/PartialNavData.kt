@@ -3,7 +3,7 @@ package com.example.finalyear.core
 data class PartialNavData (
     val prn: Int,
     var inner: NavData = NavData(prn),
-    var subframesDecoded: Int = 0,
+    var subframesDecoded: Int = 0,  // use 3 bits, rightmost bit is subframe 1
 ) {
     companion object {
         fun fromFullyDecoded(navData: NavData): PartialNavData {
@@ -31,21 +31,6 @@ data class PartialNavData (
     }
     fun isNew(): Boolean {
         return subframesDecoded == 0
-    }
-    fun isSubframeDecoded(prn: Int, subframeId: Int, issueOfData: Int): Boolean {
-        if (prn != inner.prn) return false
-
-        val hasDecodedSubframe = hasDecodedSubframe(subframeId)
-        val issueOfDataMatches = when(subframeId) {
-            1 -> inner.iodc == issueOfData
-            2 -> inner.iode == issueOfData
-            3 -> inner.iode == issueOfData
-            // subframes 4 and 5 do no have IOD to match, so we assume they always match
-            4 -> true
-            5 -> true
-            else -> throw IllegalArgumentException("Invalid subframe provided: $subframeId")
-        }
-        return hasDecodedSubframe && issueOfDataMatches
     }
     fun decodeStatus(prn: Int, subframeId: Int, issueOfData: Int): Status {
         if (prn != inner.prn) return Status.Continue
