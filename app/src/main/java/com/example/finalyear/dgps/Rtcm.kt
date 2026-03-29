@@ -39,6 +39,11 @@ data class Rtcm (
         dgps = MutableList(NUM_SATS) { null }
     }
 
+    /**
+     * Function adapted from:
+     * Federal Agency for Cartography and Geodesy (BKG) (2008) RTCM2.cpp.
+     * Available at: <https://software.rtcm-ntrip.org/browser/ntrip/trunk/BNC/RTCM/RTCM2.cpp?rev=1044> [Accessed: 25 January 2026].
+     */
     fun adjHour(zCount: Double) {
         if (t0.nanos == 0L) {
             t0 = GpsTime.fromUnixNow()

@@ -14,6 +14,7 @@ data class SurveyData private constructor (
             val rawNavDataCount = navDataList.size
             val obsDataGrouped = obsDataList.groupBy { it.inner.prn }
 
+            // Ensure all NavData maps to ObsData
             val navDataMap = mutableMapOf<Int, NavData>()
             for (navData in navDataList) {
                 if (obsDataGrouped.containsKey(navData.prn)) {  // ensure all ephemerides have observations
@@ -21,8 +22,10 @@ data class SurveyData private constructor (
                 }
             }
 
+            // Sort NavData by prn
             val filteredNavDataList = navDataMap.values.toList().sortedBy { it.prn }
 
+            // Group ObsData by epoch, sort individual list by prn
             val obsDataListByEpoch = obsDataList.groupBy { it.inner.rxTimeNs }.toMutableMap()
             for ((epoch, lst) in obsDataListByEpoch)  {
                 obsDataListByEpoch[epoch] = lst
@@ -30,6 +33,7 @@ data class SurveyData private constructor (
                     .sortedBy { it.inner.prn }
             }
 
+            // Ensure all ObsData maps to NavData
             val obsDataListIter = obsDataListByEpoch.entries.iterator()
 
             while (obsDataListIter.hasNext()) {
@@ -38,6 +42,7 @@ data class SurveyData private constructor (
                     obsDataListIter.remove()
                     continue
                 }
+                // SNR threshold filter
                 var avgSnrDb = 0.0
                 for (obsData in lst) {
                     avgSnrDb += obsData.inner.signalToNoiseRatioDb

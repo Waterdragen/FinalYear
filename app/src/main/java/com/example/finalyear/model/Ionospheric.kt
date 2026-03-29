@@ -12,6 +12,7 @@ data class Ionospheric (
     var beta: DoubleArray = doubleArrayOf(0.0, 0.0, 0.0, 0.0),
 ) {
     companion object {
+        // Applies each pseudorange with klobuchar ionospheric delay
         fun delays(navDataList: List<NavData>,
                    obsDataList: List<ObsDataWithRange>,
                    userPos: Xyz,
@@ -31,30 +32,7 @@ data class Ionospheric (
         }
     }
 
-    override fun equals(other: Any?): Boolean {
-        if (other !is Ionospheric) return false
-        return alpha.contentEquals(other.alpha)
-                && beta.contentEquals(other.beta)
-    }
-
-    override fun hashCode(): Int {
-        var result = alpha.contentHashCode()
-        result = 31 * result + beta.contentHashCode()
-        return result
-    }
-
-    fun clone(): Ionospheric {
-        return Ionospheric(
-            alpha = alpha.clone(),
-            beta = beta.clone(),
-        )
-    }
-
-    fun clear() {
-        alpha = doubleArrayOf(0.0, 0.0, 0.0, 0.0)
-        beta = doubleArrayOf(0.0, 0.0, 0.0, 0.0)
-    }
-
+    // Klobuchar, J.A. (1987) ‘Ionospheric time-delay algorithm for single-frequency GPS users’, IEEE Transactions on Aerospace and Electronic Systems, AES-23(3), pp. 325–331. doi: 10.1109/TAES.1987.310829.
     fun klobucharDelayMeters(
         userPosEcef: Xyz,
         satPosEcef: Xyz,
@@ -68,31 +46,33 @@ data class Ionospheric (
 
         val elevationSemiCircle = elevationRadians / PI
         val azimuthSemiCircle = azimuth / PI
-        val latUSemiCircle = originWgs.phi / PI
-        val longUSemiCircle = originWgs.lam / PI
+        val phiU = originWgs.phi / PI  // Latitude (Φ_u), semi circles
+        val lamU = originWgs.lam / PI  // Longitude (λ_u), semi circles
 
-        // earth's centered angle (semi-circles)
+        // Earth's centered angle (semi-turns) (ψ)
         val earthCenteredAngleSemiCircle = 0.0137 / (elevationSemiCircle + 0.11) - 0.022
 
-        // latitude of the Ionospheric Pierce Point (IPP) (semi-circles)
-        var latISemiCircle = latUSemiCircle + earthCenteredAngleSemiCircle * cos(azimuthSemiCircle * PI)
+        // Subionospheric latitude (semi-turns) (Φ_I)
+        var phiI = phiU + earthCenteredAngleSemiCircle * cos(azimuthSemiCircle * PI)
 
-        if (latISemiCircle > 0.416) {
-            latISemiCircle = 0.416
-        } else if (latISemiCircle < -0.416) {
-            latISemiCircle = -0.416
+        if (phiI > 0.416) {
+            phiI = 0.416
+        } else if (phiI < -0.416) {
+            phiI = -0.416
         }
 
-        // geodetic longitude of the Ionospheric Pierce Point (IPP) (semi-circles)
-        val longISemiCircle = (longUSemiCircle
+        // Subionospheric longitude (semi-circles) (λ_I)
+        // λ_I = λ_u + ψ sin(A) / cos(Φ_I)
+        val lamI = (lamU
             + earthCenteredAngleSemiCircle
                 * sin(azimuthSemiCircle * PI)
-                / cos(latISemiCircle * PI))
+                / cos(phiI * PI))
 
-        // geomagnetic latitude of the Ionospheric Pierce Point (IPP) (semi-circles)
-        val geomLatIPPSemiCircle = latISemiCircle + 0.064 * cos(longISemiCircle * PI - 5.08)
+        // geomagnetic latitude (semi circles) (Φ_M)
+        val phiM = phiI + 0.064 * cos(lamI * PI - 5.08)
 
-        var localTimeSec = 86400.0 / 2.0 * longISemiCircle + rxTowSec
+        // local time (t)
+        var localTimeSec = 86400.0 / 2.0 * lamI + rxTowSec
         localTimeSec %= 86400.0
         if (localTimeSec < 0) {
             localTimeSec += 86400.0
@@ -101,23 +81,20 @@ data class Ionospheric (
         // amplitude of the ionospheric delay (seconds)
         val amplitudeOfDelaySeconds = max((
                 alpha[0]
-                + alpha[1] * geomLatIPPSemiCircle
-                + alpha[2] * geomLatIPPSemiCircle * geomLatIPPSemiCircle
-                + alpha[3]
-                * geomLatIPPSemiCircle
-                * geomLatIPPSemiCircle
-                * geomLatIPPSemiCircle
+                + alpha[1] * phiM
+                + alpha[2] * phiM * phiM
+                + alpha[3] * phiM * phiM * phiM
         ), 0.0)
 
         // period of ionospheric delay
         val periodOfDelaySec = max((
                 beta[0]
-                + beta[1] * geomLatIPPSemiCircle
-                + beta[2] * geomLatIPPSemiCircle * geomLatIPPSemiCircle
-                + beta[3] * geomLatIPPSemiCircle * geomLatIPPSemiCircle * geomLatIPPSemiCircle
+                + beta[1] * phiM
+                + beta[2] * phiM * phiM
+                + beta[3] * phiM * phiM * phiM
         ), 72000.0)
 
-        // phase of ionospheric delay
+        // phase of ionospheric delay (x)
         val phaseOfDelay = 2 * PI * (localTimeSec - 50400) / periodOfDelaySec
 
         // slant factor
@@ -135,8 +112,36 @@ data class Ionospheric (
         }
 
         // apply factor for frequency bands other than L1
-        ionoDelaySec *= (Const.L1_FREQ_HZ * Const.L1_FREQ_HZ) / (frequencyHz * frequencyHz)
+        if (frequencyHz != Const.L1_FREQ_HZ) {
+            ionoDelaySec *= (Const.L1_FREQ_HZ * Const.L1_FREQ_HZ) / (frequencyHz * frequencyHz)
+        }
 
         return ionoDelaySec * Const.c
+    }
+
+    // auto generated by Android Studio
+    override fun equals(other: Any?): Boolean {
+        if (other !is Ionospheric) return false
+        return alpha.contentEquals(other.alpha)
+                && beta.contentEquals(other.beta)
+    }
+
+    // auto generated by Android Studio
+    override fun hashCode(): Int {
+        var result = alpha.contentHashCode()
+        result = 31 * result + beta.contentHashCode()
+        return result
+    }
+
+    fun clone(): Ionospheric {
+        return Ionospheric(
+            alpha = alpha.clone(),
+            beta = beta.clone(),
+        )
+    }
+
+    fun clear() {
+        alpha = doubleArrayOf(0.0, 0.0, 0.0, 0.0)
+        beta = doubleArrayOf(0.0, 0.0, 0.0, 0.0)
     }
 }

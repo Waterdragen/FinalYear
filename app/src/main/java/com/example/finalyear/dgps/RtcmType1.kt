@@ -1,9 +1,20 @@
+/**
+ * Algorithm adapted from:
+ * Federal Agency for Cartography and Geodesy (BKG) (2008) RTCM2.cpp. [source code]
+ * Available at: <https://software.rtcm-ntrip.org/browser/ntrip/trunk/BNC/RTCM/RTCM2.cpp?rev=1044>
+ *
+ * Transmission Reference:
+ * Radio Technical Commission for Maritime Services (1998) RTCM Recommended Standards for Differential GNSS (Global Navigation Satellite Systems) Service, Version 2.2. Alexandria, VA: RTCM.
+ * Betke, K. (2001). Transmission Characteristics of Marine Differential GPS (DGPS) Stations.
+ * Available at: <https://www.sigidwiki.com/images/6/66/Rtcm-sc104-transmission-characteristics-of-marine-differential-gps-stations.pdf>.
+ */
 package com.example.finalyear.dgps
 
 import com.example.finalyear.util.BitArray
 
 class RtcmType1 {
     companion object {
+        // By now we have stripped all parity bits (becomes sequence of 40 bits)
         fun decode(rtcm: Rtcm) {
             // RTCM v2 type 1: differential GPS correction (GPS only)
             var i = 48  // start of type-1 body (after 48-bit header)
@@ -35,10 +46,10 @@ class RtcmType1 {
 
                 val sat = Rtcm.satNo(SYS_GPS, prn) ?: continue
 
-                // Store DGPS corrections
                 val scalePrc = if (fact != 0) 0.32 else 0.02
                 val scaleRrc = if (fact != 0) 0.032 else 0.002
 
+                // Store DGPS corrections
                 rtcm.dgps[sat - 1] = DgpsCorrection(
                     prc = prc.toDouble() * scalePrc,
                     rrc = rrc.toDouble() * scaleRrc,

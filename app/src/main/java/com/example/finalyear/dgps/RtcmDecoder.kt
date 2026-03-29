@@ -1,3 +1,13 @@
+/**
+ * Algorithm adapted from:
+ * Takasu, T. (2013) rtcm.c (Release 2.4.3)
+ * Available at: https://github.com/tomojitakasu/RTKLIB/blob/71db0ffa0d9735697c6adfd06fdf766d0e5ce807/src/rtcm.c
+ *
+ * Transmission Reference:
+ * Radio Technical Commission for Maritime Services (1998) RTCM Recommended Standards for Differential GNSS (Global Navigation Satellite Systems) Service, Version 2.2. Alexandria, VA: RTCM.
+ * Betke, K. (2001). Transmission Characteristics of Marine Differential GPS (DGPS) Stations.
+ * Available at: <https://www.sigidwiki.com/images/6/66/Rtcm-sc104-transmission-characteristics-of-marine-differential-gps-stations.pdf>.
+ */
 package com.example.finalyear.dgps
 
 import android.util.Log
@@ -42,6 +52,7 @@ class RtcmDecoder {
                         }
 
                         // Check parity (word1)
+                        // only store first 24 bits data (stripping parity bits)
                         val dataOut = ByteArray(3)
                         parityOk1 = RtcmParity.check(word.toInt(), dataOut)
                         if (!parityOk1) {
@@ -63,6 +74,7 @@ class RtcmDecoder {
                     nbit = 0
 
                     // Check parity (subsequent words, including word2)
+                    // only store first 24 bits data (stripping parity bits)
                     val dataOut = ByteArray(3)
                     parityOk2 = RtcmParity.check(word.toInt(), dataOut)
                     if (!parityOk2) {
@@ -101,8 +113,9 @@ class RtcmDecoder {
                         word = word and 0x3u
                         continue
                     }
-
                     rtcm.adjHour(zCount)
+
+                    // Store pure data buffer (sequence of 40 bits data)
                     buff.copyInto(rtcm.buff, 0, 0, rtcm.len)  // Store the trimmed, actual message bytes
                     rtcm.msgType = messageType
                     rtcm.seqNo = seqNumber
@@ -118,7 +131,6 @@ class RtcmDecoder {
                         Log.w("GNSS", "Received RTCM message with unhandled type: $messageType from station $stationId")
                     }
 
-                    // Reset for next message (like RTKLIB)
                     nbyte = 0
                     rtcm.len = 0
                     word = word and 0x3u

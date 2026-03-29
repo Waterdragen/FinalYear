@@ -1,4 +1,12 @@
-@file:Suppress("unused")
+/**
+ * Algorithm adapted from:
+ * Google (2023) GNSSLogger.
+ * Available from https://github.com/google/gps-measurement-tools/tree/master/GNSSLogger
+ *
+ * Specifications for the bit representations and scale factors:
+ * US Department of Defense (1995) Global Positioning System Standard Positioning Service Signal Specification
+ * Available from https://www.gps.gov/sites/default/files/2025-07/1995-SPS-signal-specification.pdf
+ */
 
 package com.example.finalyear.util
 
@@ -15,12 +23,7 @@ import com.example.finalyear.math.GpsTime
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
 import java.util.concurrent.TimeUnit
-import kotlin.math.PI
 import kotlin.math.pow
-
-// Please refer to https://github.com/google/gps-measurement-tools
-// File Link: https://github.com/google/gps-measurement-tools/blob/master/GNSSLogger/pseudorange/src/main/java/com/google/location/lbs/gnss/gps/pseudorange/GpsNavigationMessageStore.java
-// Specifications: https://www.gps.gov/technical/ps/1995-SPS-signal-specification.pdf
 
 class Parser {
     data class BytePos(val index: Int, val length: Int)
@@ -31,7 +34,6 @@ class Parser {
 
             const val WORD_SIZE_BITS = 30
             const val WORD_PADDING_BITS = 2
-            const val BYTE_AS_BITS = 8
             const val GPS_CYCLE_WEEKS = 1024
             const val IODE_TO_IODC_MASK = 0xFF
             const val L1_CA_MESSAGE_LENGTH_BYTES = 40
@@ -52,14 +54,9 @@ class Parser {
             val POW_2_NEG_43 = 2.0.pow(-43.0)
             val POW_2_NEG_55 = 2.0.pow(-55.0)
 
-            const val SEMI_CIRCLE = PI
-
             const val INTEGER_RANGE = -1  // All ones in bits
-            // 3657 is the number of days between the unix epoch and GPS epoch as the GPS epoch started on
-            // Jan 6, 1980
-            val GPS_EPOCH_AS_UNIX_EPOCH_MS = TimeUnit.DAYS.toMillis(3657)
             // A GPS Cycle is 1024 weeks, or 7168 days
-            val GPS_CYCLE_MS = TimeUnit.DAYS.toMillis(7168)
+            val GPS_CYCLE_SECS = TimeUnit.DAYS.toSeconds(7168)
 
             val IODC1_POS = BytePos(82, 2)
             val IODC2_POS = BytePos(210, 8)
@@ -84,7 +81,6 @@ class Parser {
             const val A_INDEX8 = 226
             const val A_INDEX24 = 240
             val TOE_POS = BytePos(270, 16)
-            const val IODE2_INDEX = 270
             val CIC_POS = BytePos(60, 16)
             const val O0_INDEX8 = 76
             const val O0_INDEX24 = 90
@@ -104,15 +100,6 @@ class Parser {
             val B1_POS = BytePos(120, 8)
             val B2_POS = BytePos(128, 8)
             val B3_POS = BytePos(136, 8)
-            const val WN_LS_INDEX = 226
-            const val DELTA_T_LS_INDEX = 240
-            const val TOT_LS_INDEX = 218
-            const val DN_LS_INDEX = 256
-            const val WNF_LS_INDEX = 248
-            const val DELTA_TF_LS_INDEX = 270
-            const val I0UTC_INDEX8 = 210
-            const val I0UTC_INDEX24 = 180
-            const val I1UTC_INDEX = 150
         }
 
         // The prn range for GPS is [1, 32], caller should ensure no other constellations use this list
@@ -393,13 +380,6 @@ class Parser {
             return result
         }
 
-        private fun u32From24And8Lsb(index8: Int, index24: Int, rawData: ByteArray): Long {
-            val byteData = ByteData(rawData)
-            var result = byteData.get(BytePos(index24, 24)).toLong() shl 8
-            result = result or byteData.get(BytePos(index8, 8)).toLong()
-            return result
-        }
-
         private fun getTwosComplement(value: Int, bitLength: Int): Int {
             val msbMask = 1 shl (bitLength - 1)
             val msb = value and msbMask
@@ -414,9 +394,8 @@ class Parser {
         }
 
         private fun getGpsWeekWithRollover(gpsWeek: Int): Int {
-            val nowMs = System.currentTimeMillis()
-            val elapsedTimeFromGpsEpochMs = nowMs - GPS_EPOCH_AS_UNIX_EPOCH_MS
-            val rolloverCycles = elapsedTimeFromGpsEpochMs / GPS_CYCLE_MS
+            val gpsTimeSec = GpsTime.fromUnixNow().secs
+            val rolloverCycles = gpsTimeSec / GPS_CYCLE_SECS
             val rolloverWeeks = rolloverCycles.toInt() * GPS_CYCLE_WEEKS
             return gpsWeek + rolloverWeeks
         }
@@ -507,12 +486,12 @@ class Parser {
                 val wordIndex = workingIndex / GpsEphemerisDecoder.WORD_SIZE_BITS
                 // account for 2 bit padding for every 30 bit word
                 workingIndex += (wordIndex + 1) * GpsEphemerisDecoder.WORD_PADDING_BITS
-                val byteIndex = workingIndex / GpsEphemerisDecoder.BYTE_AS_BITS
-                val byteOffset = workingIndex % GpsEphemerisDecoder.BYTE_AS_BITS
+                val byteIndex = workingIndex / 8
+                val byteOffset = workingIndex % 8
 
                 val raw = rawData[byteIndex]
                 // account for zero-based indexing
-                val shiftOffset = GpsEphemerisDecoder.BYTE_AS_BITS - 1 - byteOffset
+                val shiftOffset = 8 - 1 - byteOffset
                 val mask = 1 shl shiftOffset
                 var bit = raw.toInt() and mask
                 bit = bit shr shiftOffset

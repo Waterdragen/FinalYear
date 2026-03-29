@@ -1,3 +1,13 @@
+/**
+ * Algorithm adapted from:
+ * Federal Agency for Cartography and Geodesy (BKG) (2008) RTCM2.cpp.
+ * Available at: <https://software.rtcm-ntrip.org/browser/ntrip/trunk/BNC/RTCM/RTCM2.cpp?rev=1044> [Accessed: 25 January 2026].
+ *
+ * Transmission Reference:
+ * Radio Technical Commission for Maritime Services (1998) RTCM Recommended Standards for Differential GNSS (Global Navigation Satellite Systems) Service, Version 2.2. Alexandria, VA: RTCM.
+ * Betke, K. (2001). Transmission Characteristics of Marine Differential GPS (DGPS) Stations.
+ * Available at: <https://www.sigidwiki.com/images/6/66/Rtcm-sc104-transmission-characteristics-of-marine-differential-gps-stations.pdf>. [Accessed 28 March 2026].
+ */
 package com.example.finalyear.dgps
 
 class RtcmParity {

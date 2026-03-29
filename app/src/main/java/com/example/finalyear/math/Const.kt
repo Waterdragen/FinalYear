@@ -18,16 +18,18 @@ object Const {
 
     const val L1_FREQ_HZ = 1.57542e9
 
-    // Tropospheric correction
+    // UNBabc mapping function (Tropospheric)
+    // Guo, J. & Langley, R.B. (2003) 'A New Tropospheric Propagation Delay Mapping Function for Elevation Angles Down to 2°', in Proceedings of the 16th International Technical Meeting of the Satellite Division of The Institute of Navigation (ION GPS/GNSS 2003), Portland, OR, 9-12 September. Manassas, VA: The Institute of Navigation, pp. 376-386.
     const val B_HYDROSTATIC = 0.0035716
     const val C_HYDROSTATIC = 0.082456
     const val B_NON_HYDROSTATIC = 0.0018576
     const val C_NON_HYDROSTATIC = 0.062741
 
-    // Van Dierendonck (1996) code tracking jitter model
+    // Van Dierendonck code tracking jitter model (pseudorange)
+    // Van Dierendonck A. J. (1996) ‘GPS Receivers’. Global Positioning System: theory and applications. Cap 8. Vol 1, AIAA Progress in Astronautics and Aeronautics. doi: 10.2514/5.9781600866388.0329.0407
     const val GPS_BANDWIDTH = 2.0                    // B_L (Hz)
     const val GPS_CORRELATOR_SPACING_IN_CHIPS = 0.1  // d
     const val GPS_DLL_AVERAGING_TIME_SEC = 20e-3     // T (ms)
 
-    const val ANTENNA_HEIGHT_M = 1.0
+    const val ANTENNA_HEIGHT_M = 1.0  // The surveyor holds the phone roughly 1m above the benchmark
 }
