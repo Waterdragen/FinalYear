@@ -32,9 +32,6 @@ object Positioning {
     fun lsSingleEpoch(refNavDataList: List<NavData>,
                       refObsDataList: List<ObsDataWithRange>,
                       mode: Mode): Xyz {
-        require(refNavDataList.size == refObsDataList.size) { "Nav and obs sizes mismatch" }
-        require(refNavDataList.size >= 4) { "Unhandled not enough satellites logic"}
-
         // Location of Sha Tin, Hong Kong, roughly the "centroid" of Hong Kong
         val approxPos = Xyz(-2414000.0, 5386000.0, 2417000.0)
 
@@ -42,6 +39,8 @@ object Positioning {
         val obsDataList = arrayListOf<ObsDataWithRange>()
         for (obsData in refObsDataList) {
             val match = findMatchingNavData(refNavDataList, obsData) ?: continue
+
+            // Elevation angle filter
             val elevDeg = elevationDegOfSatellite(approxPos, navData = match, obsData = obsData)
             if (elevDeg < 15.0) {
                 continue
@@ -50,6 +49,8 @@ object Positioning {
             navDataList.add(match)
             obsDataList.add(obsData)
         }
+
+        require(navDataList.size == obsDataList.size) { "NavData and ObsData lists mismatch" }
 
         val numberOfObs = obsDataList.size
         if (numberOfObs < 4) {
@@ -160,6 +161,7 @@ object Positioning {
                 throw MyException.LsConvergeFail("Least squares failed to converge after 100 iterations")
             }
         }
+        Log.d("GNSS", "rxClockBias: $rxClockBiasM")
 
         return approxPos
     }

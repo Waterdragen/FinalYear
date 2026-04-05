@@ -20,10 +20,11 @@ object Tropospheric {
                     waterVaporPressureHpa = saturationVaporPressure * rh)
             }
             // Magnus formula
+            // Magnus, G. (1844) ‘Versuche über die Spannkräfte des Wasserdampfs (Experiments on the Tension of Water Vapor)’, Annalen der Physik und Chemie, 137, pp. 225–247.
             // calculates saturation vapor pressure (maximum e at a given temperature)
             private fun saturationVaporPressureHpa(tempKelvin: Double): Double {
                 val tC = tempKelvin - 273.15
-                return 6.112 * exp((17.62 * tC) / (243.12 + tC)) // Magnus, hPa
+                return 6.1094 * exp((17.625 * tC) / (243.04 + tC)) // Magnus, hPa
             }
         }
         // Saastamoinen, J. (1972) ‘Atmospheric Correction for the Troposphere and Stratosphere in Radio Ranging Satellites’, in Soren W. Henriksen et al. (eds) The Use of Artificial Satellites for Geodesy. [Online]. Washington, D. C: American Geophysical Union. pp. 247–251. Available at: <https://doi.org/10.1029/GM015p0247>.
@@ -71,19 +72,17 @@ object Tropospheric {
             return 0.0  // No adjustments for invalid values
         }
         val originWgs = userPos.toPhiLamH()
-        val geoidHeight = 0.0  // TODO: geoidal height
-        val heightAboveSeaLevel = originWgs.h - geoidHeight
 
         val (mDry, mWet) = dryAndWetMappingValuesUNBabc(
             latRad = originWgs.phi,
             satElevationRadians = elevationRad,
-            heightMeters = heightAboveSeaLevel,
+            heightMeters = originWgs.h,
         )
 
         // Zenith delay using Saastamoinen model
         val zhd = assumedMetStats.saasZhdMeters(
             latRad = originWgs.phi,
-            heightMeters = heightAboveSeaLevel,
+            heightMeters = originWgs.h,
         )
         val zwd = assumedMetStats.saasZwdMeters()
 

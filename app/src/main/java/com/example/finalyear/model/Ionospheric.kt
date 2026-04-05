@@ -25,7 +25,6 @@ data class Ionospheric (
                     userPosEcef = userPos,
                     satPosEcef = Xyz.fromMatrixRow(satPosList, row = i),
                     rxTowSec = obsDataList[i].inner.rxTimeNs * 1e-9,
-                    frequencyHz = frequencyHz,
                 )
             }
             return ionoDelayList
@@ -37,7 +36,6 @@ data class Ionospheric (
         userPosEcef: Xyz,
         satPosEcef: Xyz,
         rxTowSec: Double,
-        frequencyHz: Double,
     ): Double {
         val topocentricAED = userPosEcef.toTopocentricAED(satPosEcef)
         val azimuth = topocentricAED.azimuth
@@ -54,12 +52,7 @@ data class Ionospheric (
 
         // Subionospheric latitude (semi-turns) (Φ_I)
         var phiI = phiU + earthCenteredAngleSemiCircle * cos(azimuthSemiCircle * PI)
-
-        if (phiI > 0.416) {
-            phiI = 0.416
-        } else if (phiI < -0.416) {
-            phiI = -0.416
-        }
+        phiI = phiI.coerceIn(-0.416, 0.416)
 
         // Subionospheric longitude (semi-circles) (λ_I)
         // λ_I = λ_u + ψ sin(A) / cos(Φ_I)
@@ -73,10 +66,7 @@ data class Ionospheric (
 
         // local time (t)
         var localTimeSec = 86400.0 / 2.0 * lamI + rxTowSec
-        localTimeSec %= 86400.0
-        if (localTimeSec < 0) {
-            localTimeSec += 86400.0
-        }
+        localTimeSec = localTimeSec.mod(86400.0)
 
         // amplitude of the ionospheric delay (seconds)
         val amplitudeOfDelaySeconds = max((
@@ -101,7 +91,7 @@ data class Ionospheric (
         val slantFactor = 1.0 + 16.0 * (0.53 - elevationSemiCircle).pow(3)
 
         // ionospheric time delay (seconds)
-        var ionoDelaySec = if (abs(phaseOfDelay) >= PI / 2.0) {
+        val ionoDelaySec = if (abs(phaseOfDelay) >= PI / 2.0) {
             5.0e-9 * slantFactor
         } else {
             (5.0e-9
@@ -109,11 +99,6 @@ data class Ionospheric (
                     - phaseOfDelay.pow(2) / 2.0
                     + phaseOfDelay.pow(4) / 24.0)
                     * amplitudeOfDelaySeconds) * slantFactor
-        }
-
-        // apply factor for frequency bands other than L1
-        if (frequencyHz != Const.L1_FREQ_HZ) {
-            ionoDelaySec *= (Const.L1_FREQ_HZ * Const.L1_FREQ_HZ) / (frequencyHz * frequencyHz)
         }
 
         return ionoDelaySec * Const.c

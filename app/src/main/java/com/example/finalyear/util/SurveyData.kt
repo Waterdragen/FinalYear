@@ -29,28 +29,11 @@ data class SurveyData private constructor (
             val obsDataListByEpoch = obsDataList.groupBy { it.inner.rxTimeNs }.toMutableMap()
             for ((epoch, lst) in obsDataListByEpoch)  {
                 obsDataListByEpoch[epoch] = lst
-                    .filter { navDataMap.containsKey(it.inner.prn) }  // ensure all observations have ephemerides
+                    .filter {
+                        navDataMap.containsKey(it.inner.prn)  // ensure all observations have ephemerides
+                        && it.inner.signalToNoiseRatioDb > 15.0  // ensure signal to noise ratio is not too weak or obstructed (weak filter)
+                    }
                     .sortedBy { it.inner.prn }
-            }
-
-            // Ensure all ObsData maps to NavData
-            val obsDataListIter = obsDataListByEpoch.entries.iterator()
-
-            while (obsDataListIter.hasNext()) {
-                val (_, lst) = obsDataListIter.next()
-                if (lst.size != filteredNavDataList.size) {  // missing measurements for epoch
-                    obsDataListIter.remove()
-                    continue
-                }
-                // SNR threshold filter
-                var avgSnrDb = 0.0
-                for (obsData in lst) {
-                    avgSnrDb += obsData.inner.signalToNoiseRatioDb
-                }
-                avgSnrDb /= lst.size
-                if (avgSnrDb < 5) {
-                    obsDataListIter.remove()
-                }
             }
 
             return SurveyData(

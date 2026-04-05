@@ -39,7 +39,7 @@ class RtcmType1 {
                     prn = 32
                 }
 
-                // Satellite problem indicators (match RTKLIB behavior/intent)
+                // Satellite problem indicators
                 if (prc == -32768 || rrc == -128) {
                     continue
                 }
