@@ -1,7 +1,6 @@
 package com.example.finalyear.coord
 
 import org.ejml.simple.SimpleMatrix
-import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.pow
@@ -10,8 +9,6 @@ import kotlin.math.sqrt
 
 data class Xyz (var x: Double, var y: Double, var z: Double) {
     companion object {
-        private const val ECEF_NEAR_POLE_THRESHOLD = 1.0
-
         fun fromMatrixRow(matrix: SimpleMatrix, row: Int): Xyz {
             return Xyz(matrix[row, 0], matrix[row, 1], matrix[row, 2])
         }
@@ -37,14 +34,7 @@ data class Xyz (var x: Double, var y: Double, var z: Double) {
         val phi = atan2(atanNumer, atanDenom).mod(2 * Math.PI)
 
         val N = ellipsoid.primeVerticalN(phi)
-        var h = p / cos(phi) - N
-
-        // Optional: altitude near poles, because cos(lat) -> 0 as lat -> 90deg
-        val polesCheck = (abs(x) < ECEF_NEAR_POLE_THRESHOLD
-                         && abs(y) < ECEF_NEAR_POLE_THRESHOLD)
-        if (polesCheck) {
-            h = abs(z) - b
-        }
+        val h = p / cos(phi) - N  // no poles check needed, HK is not near poles
 
         return PhiLamH(phi, lam, h)  // phi and lam are in radians
     }
