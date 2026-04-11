@@ -69,7 +69,7 @@ object Positioning {
         val satClockErrList = SimpleMatrix(numberOfObs, 1)
 
         // Least squares adjustments
-        // Liu, Z.Z. (2025) Handout – V08 Satellite Positioning George Lec 5 2025 Feb. 1-41. [lecture notes, pdf] The Hong Kong Polytechnic University, unpublished.
+        // Kaplan, E.D. & Hegarty, C. (eds.) (2017). Understanding GPS/GNSS: principles and applications. Norwood: Artech House. Available at: <https://d1.amobbs.com/bbs_upload782111/files_33/ourdev_584835O21W59.pdf>.
         // Adapted from my own LSGI3322 Satellite Positioning final project
         var rxClockBiasM = 0.0  // Solves for the single unknown clock bias
         var adjustments = SimpleMatrix(4, 1)
